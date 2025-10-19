@@ -64,9 +64,17 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 
 ### Directory Structure Convention ✅
 
-- **Decision Point**: Package directories named without `chadreview_` prefix (e.g., `packages/core/`), but crate names include prefix (e.g., `chadreview_core`)
-- **Rationale**: Directory prefix is redundant when already in the `chadreview` repository. Crate names need prefix for global Rust package namespace and to avoid conflicts.
-- **Pattern**: `packages/{simple_name}/` with `Cargo.toml` defining `name = "chadreview_{simple_name}"`
+- **Decision Point**: Domain-specific package naming with nested model crates, following MoosicBox HyperChad pattern
+- **Rationale**:
+  - Package names reflect domain responsibility (pr, github, syntax) not generic terms (core, common)
+  - Models separated into `/models` subdirectories with own Cargo.toml for clean compilation boundaries
+  - UI components in separate crate (`app/ui/`) for independent development
+  - Crate names include `chadreview_` prefix for global namespace
+- **Pattern**:
+  - `packages/{domain}/` with `Cargo.toml` defining `name = "chadreview_{domain}"`
+  - `packages/{domain}/models/` with `Cargo.toml` defining `name = "chadreview_{domain}_models"`
+  - Examples: `packages/pr/models/` → `chadreview_pr_models`, `packages/github/` → `chadreview_github`
+- **Key Principle**: No generic "core" or "common" packages - all packages are domain-specific
 
 ### HyperChad Dependency Strategy ✅
 
@@ -77,7 +85,7 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 
 ## Phase 1: Workspace and Package Setup 🔴 **NOT STARTED**
 
-**Goal:** Create ChadReview workspace structure and core packages
+**Goal:** Create ChadReview workspace structure with domain-specific packages following MoosicBox HyperChad pattern
 
 **Status:** All tasks pending
 
@@ -90,42 +98,56 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
     ```toml
     [workspace]
     members = [
-        "packages/core",
+        "packages/pr/models",
+        "packages/pr",
+        "packages/git_provider/models",
+        "packages/git_provider",
+        "packages/github/models",
+        "packages/github",
+        "packages/syntax",
+        "packages/state",
+        "packages/app/models",
+        "packages/app/ui",
         "packages/app",
     ]
     resolver = "2"
 
     [workspace.package]
     version = "0.1.0"
-    edition = "2021"
+    edition = "2024"
     authors = ["Your Name <your.email@example.com>"]
-    license = "MIT OR Apache-2.0"
+    license = "MPL-2.0"
     repository = "https://github.com/yourusername/chadreview"
 
     [workspace.dependencies]
-    chadreview_core = { path = "packages/core", version = "0.1.0" }
+    # Internal crates - models (always use default-features = false)
+    chadreview_pr_models = { path = "packages/pr/models", version = "0.1.0", default-features = false }
+    chadreview_git_provider_models = { path = "packages/git_provider/models", version = "0.1.0", default-features = false }
+    chadreview_github_models = { path = "packages/github/models", version = "0.1.0", default-features = false }
+    chadreview_app_models = { path = "packages/app/models", version = "0.1.0", default-features = false }
 
-    # External dependencies
-    tokio = { version = "1", features = ["full"] }
-    reqwest = { version = "0.11", features = ["json"] }
-    serde = { version = "1", features = ["derive"] }
-    serde_json = "1"
-    chrono = { version = "0.4", features = ["serde"] }
-    syntect = "5"
-    anyhow = "1"
-    thiserror = "1"
-    async-trait = "0.1"
+    # Internal crates - packages (always use default-features = false)
+    chadreview_pr = { path = "packages/pr", version = "0.1.0", default-features = false }
+    chadreview_git_provider = { path = "packages/git_provider", version = "0.1.0", default-features = false }
+    chadreview_github = { path = "packages/github", version = "0.1.0", default-features = false }
+    chadreview_syntax = { path = "packages/syntax", version = "0.1.0", default-features = false }
+    chadreview_state = { path = "packages/state", version = "0.1.0", default-features = false }
+    chadreview_app_ui = { path = "packages/app/ui", version = "0.1.0", default-features = false }
+    chadreview_app = { path = "packages/app", version = "0.1.0", default-features = false }
 
-    # HyperChad framework - use git URL for latest API
-    hyperchad = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master" }
-    hyperchad_app = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master" }
-    hyperchad_renderer = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master" }
-    hyperchad_renderer_html = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master" }
-    hyperchad_renderer_html_actix = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master" }
-    hyperchad_renderer_vanilla_js = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master" }
-    hyperchad_router = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master" }
-    hyperchad_state = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master" }
-    hyperchad_template = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master" }
+    # External dependencies (always use default-features = false, opt-in to features in individual crates)
+    tokio = { version = "1", default-features = false }
+    reqwest = { version = "0.11", default-features = false }
+    serde = { version = "1", default-features = false }
+    serde_json = { version = "1", default-features = false }
+    chrono = { version = "0.4", default-features = false }
+    syntect = { version = "5", default-features = false }
+    anyhow = { version = "1", default-features = false }
+    thiserror = { version = "1", default-features = false }
+    async-trait = { version = "0.1", default-features = false }
+
+    # HyperChad framework - use git URL for latest API (always use default-features = false)
+    hyperchad = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
     ```
 
   - [ ] Create `packages/` directory
@@ -150,13 +172,13 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 - [ ] `.gitignore` covers Rust artifacts
 - [ ] Run `cargo metadata` (workspace recognized)
 
-### 1.2 Core Package Creation
+### 1.2 PR Models Package Creation
 
-- [ ] Create `core` package 🔴 **CRITICAL**
+- [ ] Create `pr/models` package 🔴 **CRITICAL**
 
-  - [ ] Create `packages/core/` directory
-  - [ ] Create `packages/core/src/` directory
-  - [ ] Create `packages/core/src/lib.rs` with ONLY clippy configuration:
+  - [ ] Create `packages/pr/models/` directory
+  - [ ] Create `packages/pr/models/src/` directory
+  - [ ] Create `packages/pr/models/src/lib.rs` with ONLY clippy configuration:
 
     ```rust
     #![cfg_attr(feature = "fail-on-warnings", deny(warnings))]
@@ -165,30 +187,25 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 
     ```
 
-  - [ ] Create `packages/core/Cargo.toml`:
+  - [ ] Create `packages/pr/models/Cargo.toml`:
 
     ```toml
     [package]
-    name = "chadreview_core"
+    name = "chadreview_pr_models"
     version = { workspace = true }
     edition = { workspace = true }
     authors = { workspace = true }
     license = { workspace = true }
     repository = { workspace = true }
-    description = "Core domain logic for ChadReview PR review tool"
+    description = "Pull request domain models for ChadReview"
     readme = "README.md"
-    keywords = ["github", "pull-request", "code-review"]
-    categories = ["development-tools"]
+    keywords = ["pull-request", "models"]
+    categories = ["data-structures"]
 
     [dependencies]
 
     [features]
-    default = ["github"]
-
-    github = []
-    gitlab = []
-    bitbucket = []
-
+    default = []
     fail-on-warnings = []
 
     [dev-dependencies]
@@ -196,16 +213,356 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 
 #### 1.2 Verification Checklist
 
-- [ ] Directory structure exists at correct paths
+- [ ] Directory structure exists at `packages/pr/models/`
 - [ ] `Cargo.toml` has valid TOML syntax and follows workspace conventions
 - [ ] `lib.rs` contains ONLY clippy configuration
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_core -- -D warnings` (zero warnings)
-- [ ] Run `cargo build -p chadreview_core` (compiles with default features)
-- [ ] Run `cargo build -p chadreview_core --no-default-features` (compiles with no features)
+- [ ] Run `cargo clippy --all-targets -p chadreview_pr_models -- -D warnings` (zero warnings)
+- [ ] Run `cargo build -p chadreview_pr_models` (compiles)
+- [ ] Run `cargo build -p chadreview_pr_models --no-default-features` (compiles)
 - [ ] Run `cargo machete` (zero unused dependencies)
 
-### 1.3 App Package Creation
+### 1.3 PR Package Creation
+
+- [ ] Create `pr` package 🔴 **CRITICAL**
+
+  - [ ] Create `packages/pr/` directory
+  - [ ] Create `packages/pr/src/` directory
+  - [ ] Create `packages/pr/src/lib.rs` with ONLY clippy configuration:
+
+    ```rust
+    #![cfg_attr(feature = "fail-on-warnings", deny(warnings))]
+    #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
+    #![allow(clippy::multiple_crate_versions)]
+
+    ```
+
+  - [ ] Create `packages/pr/Cargo.toml`:
+
+    ```toml
+    [package]
+    name = "chadreview_pr"
+    version = { workspace = true }
+    edition = { workspace = true }
+    authors = { workspace = true }
+    license = { workspace = true }
+    repository = { workspace = true }
+    description = "Pull request domain logic for ChadReview"
+    readme = "README.md"
+    keywords = ["pull-request", "diff"]
+    categories = ["development-tools"]
+
+    [dependencies]
+    chadreview_pr_models = { workspace = true }
+
+    [features]
+    default = []
+    fail-on-warnings = ["chadreview_pr_models/fail-on-warnings"]
+
+    [dev-dependencies]
+    ```
+
+#### 1.3 Verification Checklist
+
+- [ ] Directory structure exists at `packages/pr/`
+- [ ] `Cargo.toml` has valid TOML syntax
+- [ ] `lib.rs` contains ONLY clippy configuration
+- [ ] Run `cargo fmt` (format code)
+- [ ] Run `cargo clippy --all-targets -p chadreview_pr -- -D warnings` (zero warnings)
+- [ ] Run `cargo build -p chadreview_pr` (compiles)
+- [ ] Run `cargo machete` (zero unused dependencies)
+
+### 1.4 Git Provider Models Package Creation
+
+- [ ] Create `git_provider/models` package 🔴 **CRITICAL**
+
+  - [ ] Create `packages/git_provider/models/` directory
+  - [ ] Create `packages/git_provider/models/src/` directory
+  - [ ] Create `packages/git_provider/models/src/lib.rs` with clippy configuration
+  - [ ] Create `packages/git_provider/models/Cargo.toml`:
+
+    ```toml
+    [package]
+    name = "chadreview_git_provider_models"
+    version = { workspace = true }
+    edition = { workspace = true }
+    authors = { workspace = true }
+    license = { workspace = true }
+    repository = { workspace = true }
+    description = "Git provider shared models for ChadReview"
+    readme = "README.md"
+
+    [dependencies]
+
+    [features]
+    default = []
+    fail-on-warnings = []
+    ```
+
+#### 1.4 Verification Checklist
+
+- [ ] Directory structure exists
+- [ ] Run `cargo build -p chadreview_git_provider_models` (compiles)
+- [ ] Run `cargo clippy --all-targets -p chadreview_git_provider_models -- -D warnings` (zero warnings)
+
+### 1.5 Git Provider Package Creation
+
+- [ ] Create `git_provider` package 🔴 **CRITICAL**
+
+  - [ ] Create `packages/git_provider/` directory
+  - [ ] Create `packages/git_provider/src/` directory
+  - [ ] Create `packages/git_provider/src/lib.rs` with clippy configuration
+  - [ ] Create `packages/git_provider/Cargo.toml`:
+
+    ```toml
+    [package]
+    name = "chadreview_git_provider"
+    version = { workspace = true }
+    edition = { workspace = true }
+    authors = { workspace = true }
+    license = { workspace = true }
+    repository = { workspace = true }
+    description = "Git provider trait abstraction for ChadReview"
+    readme = "README.md"
+    keywords = ["git", "provider", "trait"]
+
+    [dependencies]
+    chadreview_pr_models = { workspace = true }
+    chadreview_git_provider_models = { workspace = true }
+
+    [features]
+    default = []
+    fail-on-warnings = [
+        "chadreview_pr_models/fail-on-warnings",
+        "chadreview_git_provider_models/fail-on-warnings",
+    ]
+    ```
+
+#### 1.5 Verification Checklist
+
+- [ ] Directory structure exists
+- [ ] Run `cargo build -p chadreview_git_provider` (compiles)
+- [ ] Run `cargo clippy --all-targets -p chadreview_git_provider -- -D warnings` (zero warnings)
+
+### 1.6 GitHub Models Package Creation
+
+- [ ] Create `github/models` package 🔴 **CRITICAL**
+
+  - [ ] Create `packages/github/models/` directory
+  - [ ] Create `packages/github/models/src/` directory
+  - [ ] Create `packages/github/models/src/lib.rs` with clippy configuration
+  - [ ] Create `packages/github/models/Cargo.toml`:
+
+    ```toml
+    [package]
+    name = "chadreview_github_models"
+    version = { workspace = true }
+    edition = { workspace = true }
+    authors = { workspace = true }
+    license = { workspace = true }
+    repository = { workspace = true }
+    description = "GitHub API response models for ChadReview"
+    readme = "README.md"
+
+    [dependencies]
+    chadreview_pr_models = { workspace = true }
+
+    [features]
+    default = []
+    fail-on-warnings = ["chadreview_pr_models/fail-on-warnings"]
+    ```
+
+#### 1.6 Verification Checklist
+
+- [ ] Directory structure exists
+- [ ] Run `cargo build -p chadreview_github_models` (compiles)
+
+### 1.7 GitHub Package Creation
+
+- [ ] Create `github` package 🔴 **CRITICAL**
+
+  - [ ] Create `packages/github/` directory
+  - [ ] Create `packages/github/src/` directory
+  - [ ] Create `packages/github/src/lib.rs` with clippy configuration
+  - [ ] Create `packages/github/Cargo.toml`:
+
+    ```toml
+    [package]
+    name = "chadreview_github"
+    version = { workspace = true }
+    edition = { workspace = true }
+    authors = { workspace = true }
+    license = { workspace = true }
+    repository = { workspace = true }
+    description = "GitHub provider implementation for ChadReview"
+    readme = "README.md"
+    keywords = ["github", "api"]
+
+    [dependencies]
+    chadreview_github_models = { workspace = true }
+    chadreview_git_provider = { workspace = true }
+    chadreview_pr_models = { workspace = true }
+
+    [features]
+    default = []
+    fail-on-warnings = [
+        "chadreview_github_models/fail-on-warnings",
+        "chadreview_git_provider/fail-on-warnings",
+        "chadreview_pr_models/fail-on-warnings",
+    ]
+
+    [dev-dependencies]
+    ```
+
+#### 1.7 Verification Checklist
+
+- [ ] Directory structure exists
+- [ ] Run `cargo build -p chadreview_github` (compiles)
+- [ ] Run `cargo clippy --all-targets -p chadreview_github -- -D warnings` (zero warnings)
+
+### 1.8 Syntax Package Creation
+
+- [ ] Create `syntax` package 🔴 **CRITICAL**
+
+  - [ ] Create `packages/syntax/` directory
+  - [ ] Create `packages/syntax/src/` directory
+  - [ ] Create `packages/syntax/src/lib.rs` with clippy configuration
+  - [ ] Create `packages/syntax/Cargo.toml`:
+
+    ```toml
+    [package]
+    name = "chadreview_syntax"
+    version = { workspace = true }
+    edition = { workspace = true }
+    authors = { workspace = true }
+    license = { workspace = true }
+    repository = { workspace = true }
+    description = "Syntax highlighting for ChadReview"
+    readme = "README.md"
+
+    [dependencies]
+    chadreview_pr_models = { workspace = true }
+
+    [features]
+    default = []
+    fail-on-warnings = ["chadreview_pr_models/fail-on-warnings"]
+    ```
+
+#### 1.8 Verification Checklist
+
+- [ ] Directory structure exists
+- [ ] Run `cargo build -p chadreview_syntax` (compiles)
+
+### 1.9 State Package Creation
+
+- [ ] Create `state` package 🔴 **CRITICAL**
+
+  - [ ] Create `packages/state/` directory
+  - [ ] Create `packages/state/src/` directory
+  - [ ] Create `packages/state/src/lib.rs` with clippy configuration
+  - [ ] Create `packages/state/Cargo.toml`:
+
+    ```toml
+    [package]
+    name = "chadreview_state"
+    version = { workspace = true }
+    edition = { workspace = true }
+    authors = { workspace = true }
+    license = { workspace = true }
+    repository = { workspace = true }
+    description = "Application state management for ChadReview"
+    readme = "README.md"
+
+    [dependencies]
+    chadreview_pr_models = { workspace = true }
+    chadreview_git_provider = { workspace = true }
+
+    [features]
+    default = []
+    fail-on-warnings = [
+        "chadreview_pr_models/fail-on-warnings",
+        "chadreview_git_provider/fail-on-warnings",
+    ]
+    ```
+
+#### 1.9 Verification Checklist
+
+- [ ] Directory structure exists
+- [ ] Run `cargo build -p chadreview_state` (compiles)
+
+### 1.10 App Models Package Creation
+
+- [ ] Create `app/models` package 🔴 **CRITICAL**
+
+  - [ ] Create `packages/app/models/` directory
+  - [ ] Create `packages/app/models/src/` directory
+  - [ ] Create `packages/app/models/src/lib.rs` with clippy configuration
+  - [ ] Create `packages/app/models/Cargo.toml`:
+
+    ```toml
+    [package]
+    name = "chadreview_app_models"
+    version = { workspace = true }
+    edition = { workspace = true }
+    authors = { workspace = true }
+    license = { workspace = true }
+    repository = { workspace = true }
+    description = "Application-specific models for ChadReview"
+    readme = "README.md"
+
+    [dependencies]
+    chadreview_pr_models = { workspace = true }
+
+    [features]
+    default = []
+    fail-on-warnings = ["chadreview_pr_models/fail-on-warnings"]
+    ```
+
+#### 1.10 Verification Checklist
+
+- [ ] Directory structure exists
+- [ ] Run `cargo build -p chadreview_app_models` (compiles)
+
+### 1.11 App UI Package Creation
+
+- [ ] Create `app/ui` package 🔴 **CRITICAL**
+
+  - [ ] Create `packages/app/ui/` directory
+  - [ ] Create `packages/app/ui/src/` directory
+  - [ ] Create `packages/app/ui/src/lib.rs` with clippy configuration
+  - [ ] Create `packages/app/ui/Cargo.toml`:
+
+    ```toml
+    [package]
+    name = "chadreview_app_ui"
+    version = { workspace = true }
+    edition = { workspace = true }
+    authors = { workspace = true }
+    license = { workspace = true }
+    repository = { workspace = true }
+    description = "HyperChad UI components for ChadReview"
+    readme = "README.md"
+
+    [dependencies]
+    chadreview_pr_models = { workspace = true }
+    chadreview_app_models = { workspace = true }
+    hyperchad = { workspace = true, features = ["template"] }
+
+    [features]
+    default = []
+    fail-on-warnings = [
+        "chadreview_pr_models/fail-on-warnings",
+        "chadreview_app_models/fail-on-warnings",
+    ]
+    ```
+
+#### 1.11 Verification Checklist
+
+- [ ] Directory structure exists
+- [ ] Run `cargo build -p chadreview_app_ui` (compiles)
+- [ ] Run `cargo clippy --all-targets -p chadreview_app_ui -- -D warnings` (zero warnings)
+
+### 1.12 App Package Creation
 
 - [ ] Create `app` package 🔴 **CRITICAL**
 
@@ -241,69 +598,110 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
     path = "src/main.rs"
 
     [dependencies]
-    chadreview_core = { workspace = true }
+    chadreview_app_ui = { workspace = true }
+    chadreview_state = { workspace = true }
+    chadreview_git_provider = { workspace = true }
+    chadreview_github = { workspace = true }
+    hyperchad = { workspace = true, features = ["app", "router"] }
 
     [features]
-    default = ["html", "vanilla-js"]
+    default = ["html", "vanilla-js", "github"]
 
-    html = []
-    vanilla-js = []
-    egui-wgpu = []
-    egui-glow = []
-    fltk = []
+    # Provider selection
+    github = ["chadreview_github"]
+    gitlab = []     # Post-MVP
+    bitbucket = []  # Post-MVP
 
-    actix = []
-    lambda = []
+    # HyperChad rendering backends
+    html = ["hyperchad/renderer-html"]
+    vanilla-js = ["html", "hyperchad/renderer-vanilla-js"]
+    egui-wgpu = ["hyperchad/renderer-egui-wgpu"]
+    egui-glow = ["hyperchad/renderer-egui-glow"]
+    fltk = ["hyperchad/renderer-fltk"]
 
-    dev = []
-    fail-on-warnings = ["chadreview_core/fail-on-warnings"]
+    # Deployment options
+    actix = ["hyperchad/renderer-html-actix"]
+    lambda = ["hyperchad/renderer-html-lambda"]
+
+    # Development
+    dev = ["assets", "static-routes"]
+    assets = ["hyperchad/renderer-assets"]
+    static-routes = ["hyperchad/router-static-routes"]
+
+    fail-on-warnings = [
+        "chadreview_app_ui/fail-on-warnings",
+        "chadreview_state/fail-on-warnings",
+        "chadreview_git_provider/fail-on-warnings",
+        "chadreview_github/fail-on-warnings",
+    ]
 
     [dev-dependencies]
     ```
 
-#### 1.3 Verification Checklist
+#### 1.12 Verification Checklist
 
 - [ ] Directory structure exists at correct paths
 - [ ] `Cargo.toml` has valid TOML syntax
 - [ ] `main.rs` compiles and runs
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_app -- -D warnings` (zero warnings)
+- [ ] Run `cargo clippy --all-targets -p chadreview_app_ui -- -D warnings` (zero warnings)
 - [ ] Run `cargo build -p chadreview_app` (compiles)
 - [ ] Run `cargo run -p chadreview_app` (prints hello message)
 - [ ] Run `cargo machete` (zero unused dependencies)
 
-## Phase 2: Core Domain Models and Provider Abstraction 🔴 **NOT STARTED**
+## Phase 2: PR Models Package Implementation 🔴 **NOT STARTED**
 
-**Goal:** Implement core data types for PR, diffs, and comments, plus GitProvider trait
+**Goal:** Implement PR domain models organized into separate modules
 
 **Status:** All tasks pending
 
-### 2.1 PR and Metadata Models
+### 2.1 PR Models - Core Types
 
 **CRITICAL NOTES:**
 
 - Use `chrono::DateTime<Utc>` for timestamps
 - Use `BTreeMap/BTreeSet` for any collections
 - All types must derive `Debug, Clone, serde::Serialize, serde::Deserialize`
+- Models are in `packages/pr/models/src/` NOT in a single models.rs file
 
-- [ ] Add required dependencies to `packages/core/Cargo.toml` 🔴 **CRITICAL**
+- [ ] Add required dependencies to `packages/pr/models/Cargo.toml` 🔴 **CRITICAL**
 
   - [ ] Add to `[dependencies]`:
     ```toml
-    serde = { workspace = true }
-    chrono = { workspace = true }
-    async-trait = { workspace = true }
+    serde = { workspace = true, features = ["derive"] }
+    chrono = { workspace = true, features = ["serde"] }
     ```
-  - [ ] **VERIFICATION**: Run `cargo tree -p chadreview_core` to confirm dependencies added
+  - [ ] **VERIFICATION**: Run `cargo tree -p chadreview_pr_models` to confirm dependencies added
 
-- [ ] Create `src/models.rs` with core types 🔴 **CRITICAL**
+- [ ] Create `pr/models/src/lib.rs` with module exports 🔴 **CRITICAL**
 
-  - [ ] Add `pub mod models;` to `lib.rs`
-  - [ ] Implement complete model definitions:
+  - [ ] Update `packages/pr/models/src/lib.rs`:
+
+    ```rust
+    #![cfg_attr(feature = "fail-on-warnings", deny(warnings))]
+    #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
+    #![allow(clippy::multiple_crate_versions)]
+
+    pub mod pr;
+    pub mod diff;
+    pub mod comment;
+    pub mod user;
+
+    // Re-export commonly used types
+    pub use pr::{PrState, PullRequest};
+    pub use diff::{DiffFile, DiffHunk, DiffLine, FileStatus, LineType};
+    pub use comment::{Comment, CommentType, CreateComment};
+    pub use user::{Commit, Label, User};
+    ```
+
+- [ ] Create `pr/models/src/pr.rs` with PR types 🔴 **CRITICAL**
+
+  - [ ] Implement complete PR type definitions:
 
     ```rust
     use chrono::{DateTime, Utc};
     use serde::{Deserialize, Serialize};
+    use crate::user::{Commit, Label, User};
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct PullRequest {
@@ -332,27 +730,14 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
         Closed,
         Merged,
     }
+    ```
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct User {
-        pub login: String,
-        pub avatar_url: String,
-        pub html_url: String,
-    }
+- [ ] Create `pr/models/src/diff.rs` with diff types 🔴 **CRITICAL**
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct Label {
-        pub name: String,
-        pub color: String,
-    }
+  - [ ] Implement diff type definitions:
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct Commit {
-        pub sha: String,
-        pub message: String,
-        pub author: User,
-        pub committed_at: DateTime<Utc>,
-    }
+    ```rust
+    use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct DiffFile {
@@ -395,6 +780,16 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
         Deletion,
         Context,
     }
+    ```
+
+- [ ] Create `pr/models/src/comment.rs` with comment types 🔴 **CRITICAL**
+
+  - [ ] Implement comment type definitions:
+
+    ```rust
+    use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Serialize};
+    use crate::user::User;
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Comment {
@@ -422,7 +817,40 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
     }
     ```
 
-  - [ ] Add unit tests for model serialization:
+- [ ] Create `pr/models/src/user.rs` with user types 🔴 **CRITICAL**
+
+  - [ ] Implement user type definitions:
+
+    ```rust
+    use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct User {
+        pub id: String,
+        pub username: String,
+        pub avatar_url: String,
+        pub html_url: String,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Label {
+        pub name: String,
+        pub color: String,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Commit {
+        pub sha: String,
+        pub message: String,
+        pub author: User,
+        pub committed_at: DateTime<Utc>,
+    }
+    ```
+
+- [ ] Add unit tests for model serialization 🔴 **CRITICAL**
+
+  - [ ] Add to `pr/models/src/pr.rs`:
 
     ```rust
     #[cfg(test)]
@@ -438,6 +866,15 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
             let deserialized: PrState = serde_json::from_str(&json).unwrap();
             assert_eq!(deserialized, PrState::Open);
         }
+    }
+    ```
+
+  - [ ] Add to `pr/models/src/comment.rs`:
+
+    ```rust
+    #[cfg(test)]
+    mod tests {
+        use super::*;
 
         #[test]
         fn test_comment_type_serialization() {
@@ -452,32 +889,74 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
     }
     ```
 
+  - [ ] Add to `pr/models/src/diff.rs`:
+
+    ```rust
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_file_status_serialization() {
+            let status = FileStatus::Modified;
+            let json = serde_json::to_string(&status).unwrap();
+            assert_eq!(json, r#""Modified"#);
+        }
+
+        #[test]
+        fn test_line_type_serialization() {
+            let line_type = LineType::Addition;
+            let json = serde_json::to_string(&line_type).unwrap();
+            assert_eq!(json, r#""Addition"#);
+        }
+    }
+    ```
+
+  - [ ] Add `serde_json` to dev-dependencies in `pr/models/Cargo.toml`:
+    ```toml
+    [dev-dependencies]
+    serde_json = { workspace = true }
+    ```
+
 #### 2.1 Verification Checklist
 
+- [ ] All model files created in correct locations
 - [ ] All models compile without errors
 - [ ] All types derive required traits
+- [ ] Module structure in lib.rs correct with re-exports
 - [ ] Serialization tests pass
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_core -- -D warnings` (zero warnings)
-- [ ] Run `cargo build -p chadreview_core` (compiles)
-- [ ] Run `cargo test -p chadreview_core` (all tests pass)
+- [ ] Run `cargo clippy --all-targets -p chadreview_pr_models -- -D warnings` (zero warnings)
+- [ ] Run `cargo build -p chadreview_pr_models` (compiles)
+- [ ] Run `cargo test -p chadreview_pr_models` (all tests pass)
 - [ ] Run `cargo machete` (all dependencies used)
 
-## Phase 3: Git Provider Trait and GitHub Implementation 🔴 **NOT STARTED**
+## Phase 3a: Git Provider Trait Package 🔴 **NOT STARTED**
 
-**Goal:** Define abstract `GitProvider` trait and implement GitHub provider
+**Goal:** Define abstract `GitProvider` trait in dedicated package
 
 **Status:** All tasks pending
 
-### 3.1 Git Provider Trait Definition
+### 3a.1 Git Provider Trait Definition
 
-- [ ] Create `src/provider.rs` with `GitProvider` trait 🔴 **CRITICAL**
+- [ ] Add required dependencies to `packages/git_provider/Cargo.toml` 🔴 **CRITICAL**
 
-  - [ ] Add `pub mod provider;` to `lib.rs`
+  - [ ] Add to `[dependencies]`:
+    ```toml
+    chadreview_pr_models = { workspace = true }
+    anyhow = { workspace = true, features = ["std"] }
+    async-trait = { workspace = true }
+    ```
+  - [ ] **VERIFICATION**: Run `cargo tree -p chadreview_git_provider` to confirm dependencies added
+
+- [ ] Create `git_provider/src/provider.rs` with `GitProvider` trait 🔴 **CRITICAL**
+
+  - [ ] Add `pub mod provider;` to `git_provider/src/lib.rs`
+  - [ ] Re-export in lib.rs: `pub use provider::GitProvider;`
   - [ ] Define complete `GitProvider` trait:
 
     ```rust
-    use crate::models::*;
+    use chadreview_pr_models::{Comment, CreateComment, DiffFile, PullRequest};
     use anyhow::Result;
 
     #[async_trait::async_trait]
@@ -512,16 +991,66 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
     }
     ```
 
-#### 3.1 Verification Checklist
+#### 3a.1 Verification Checklist
 
 - [ ] Trait compiles without errors
 - [ ] All methods have appropriate signatures
+- [ ] Uses `chadreview_pr_models` types not local definitions
 - [ ] Documentation comments added to all trait methods
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_core -- -D warnings` (zero warnings)
-- [ ] Run `cargo build -p chadreview_core` (compiles)
+- [ ] Run `cargo clippy --all-targets -p chadreview_git_provider -- -D warnings` (zero warnings)
+- [ ] Run `cargo build -p chadreview_git_provider` (compiles)
 
-### 3.2 GitHub Provider Implementation
+## Phase 3b: GitHub Provider Implementation 🔴 **NOT STARTED**
+
+**Goal:** Implement GitHub provider with API response models and transformations
+
+**Status:** All tasks pending
+
+### 3b.1 GitHub Models Package
+
+- [ ] Add required dependencies to `packages/github/models/Cargo.toml` 🔴 **CRITICAL**
+
+  - [ ] Add to `[dependencies]`:
+    ```toml
+    chadreview_pr_models = { workspace = true }
+    serde = { workspace = true, features = ["derive"] }
+    chrono = { workspace = true, features = ["serde"] }
+    ```
+
+- [ ] Create `github/models/src/lib.rs` with GitHub API response types 🔴 **CRITICAL**
+
+  - [ ] Implement GitHub-specific response models:
+
+    ```rust
+    #![cfg_attr(feature = "fail-on-warnings", deny(warnings))]
+    #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
+    #![allow(clippy::multiple_crate_versions)]
+
+    use serde::{Deserialize, Serialize};
+    use chadreview_pr_models::PullRequest;
+
+    #[derive(Debug, Deserialize, Serialize)]
+    pub struct GithubPrResponse {
+        pub number: u64,
+        pub title: String,
+        pub body: Option<String>,
+        pub state: String,
+        pub draft: bool,
+        pub merged: Option<bool>,
+        // Add other GitHub-specific fields as needed
+    }
+
+    // Transformation from GitHub response to domain model
+    impl From<GithubPrResponse> for PullRequest {
+        fn from(github_pr: GithubPrResponse) -> Self {
+            // Transformation logic will be implemented in Phase 3b.2
+            todo!("Implement transformation")
+        }
+    }
+    ```
+
+### 3b.2 GitHub Provider Implementation
 
 **CRITICAL NOTES:**
 
@@ -529,32 +1058,38 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 - Use `anyhow::Result` for error handling
 - Implement rate limiting before making requests
 - All API calls are async
+- Transform GitHub API responses into domain models
 
-- [ ] Add required dependencies 🔴 **CRITICAL**
+- [ ] Add required dependencies to `packages/github/Cargo.toml` 🔴 **CRITICAL**
 
-  - [ ] Add to `packages/core/Cargo.toml` dependencies:
+  - [ ] Add to `[dependencies]`:
     ```toml
-    reqwest = { workspace = true }
-    anyhow = { workspace = true }
+    chadreview_github_models = { workspace = true }
+    chadreview_git_provider = { workspace = true }
+    chadreview_pr_models = { workspace = true }
+    reqwest = { workspace = true, features = ["json"] }
+    anyhow = { workspace = true, features = ["std"] }
     thiserror = { workspace = true }
-    tokio = { workspace = true }
+    tokio = { workspace = true, features = ["full"] }
     serde_json = { workspace = true }
+    async-trait = { workspace = true }
+    chrono = { workspace = true }
     ```
-  - [ ] Add to `packages/core/Cargo.toml` dev-dependencies:
+  - [ ] Add to `[dev-dependencies]`:
     ```toml
     wiremock = "0.5"
     tokio-test = "0.4"
     ```
-  - [ ] **VERIFICATION**: Run `cargo tree -p chadreview_core`
+  - [ ] **VERIFICATION**: Run `cargo tree -p chadreview_github`
 
-- [ ] Create `src/github.rs` with GitHub provider implementation 🔴 **CRITICAL**
+- [ ] Create `github/src/client.rs` with GitHub HTTP client 🔴 **CRITICAL**
 
-  - [ ] Add `#[cfg(feature = "github")] pub mod github;` to `lib.rs`
+  - [ ] Add `pub mod client;` and `pub mod provider;` to `github/src/lib.rs`
   - [ ] Implement `GitHubProvider` struct:
 
     ```rust
-    use crate::models::*;
-    use crate::provider::GitProvider;
+    use chadreview_pr_models::{Comment, CreateComment, DiffFile, PullRequest};
+    use chadreview_git_provider::GitProvider;
     use anyhow::Result;
 
     pub struct GitHubProvider {
@@ -647,7 +1182,8 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 
     fn parse_user(value: &serde_json::Value) -> User {
         User {
-            login: value["login"].as_str().unwrap().to_string(),
+            id: value["id"].as_u64().unwrap().to_string(),
+            username: value["login"].as_str().unwrap().to_string(),
             avatar_url: value["avatar_url"].as_str().unwrap().to_string(),
             html_url: value["html_url"].as_str().unwrap().to_string(),
         }
@@ -704,6 +1240,7 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
                 "state": "open",
                 "draft": false,
                 "user": {
+                    "id": 12345,
                     "login": "testuser",
                     "avatar_url": "https://example.com/avatar.png",
                     "html_url": "https://github.com/testuser"
@@ -732,7 +1269,7 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
             assert_eq!(pr.number, 123);
             assert_eq!(pr.title, "Test PR");
             assert_eq!(pr.state, PrState::Open);
-            assert_eq!(pr.author.login, "testuser");
+            assert_eq!(pr.author.username, "testuser");
             assert_eq!(pr.provider, "github");
         }
 
@@ -748,6 +1285,7 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
                 "merged": true,
                 "draft": false,
                 "user": {
+                    "id": 67890,
                     "login": "author",
                     "avatar_url": "https://example.com/avatar.png",
                     "html_url": "https://github.com/author"
@@ -777,16 +1315,19 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
     }
     ```
 
-#### 3.2 Verification Checklist
+#### 3b.2 Verification Checklist
 
-- [ ] GitHub provider compiles without errors
-- [ ] `get_pr` method fully implemented with parsing
+- [ ] GitHub models package compiles
+- [ ] GitHub provider package compiles without errors
+- [ ] `get_pr` method fully implemented with parsing and transformation
 - [ ] Integration tests with wiremock pass
 - [ ] Error handling for non-200 responses works
+- [ ] Transformation from `GithubPrResponse` to `PullRequest` works correctly
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_core -- -D warnings` (zero warnings)
-- [ ] Run `cargo build -p chadreview_core` (compiles)
-- [ ] Run `cargo test -p chadreview_core` (all tests pass)
+- [ ] Run `cargo clippy --all-targets -p chadreview_github_models -- -D warnings` (zero warnings)
+- [ ] Run `cargo clippy --all-targets -p chadreview_github -- -D warnings` (zero warnings)
+- [ ] Run `cargo build -p chadreview_github` (compiles)
+- [ ] Run `cargo test -p chadreview_github` (all tests pass)
 - [ ] Run `cargo machete` (all dependencies used)
 
 ## Phase 4: Diff Parsing and Syntax Highlighting 🔴 **NOT STARTED**
@@ -797,37 +1338,66 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 
 ### 4.1 Diff Parser Implementation
 
-- [ ] Add syntect dependency for syntax highlighting 🔴 **CRITICAL**
-
-  - [ ] Add to `packages/core/Cargo.toml`:
-    ```toml
-    syntect = { workspace = true }
-    ```
-
 - [ ] Implement `get_diff` in GitHub provider 🔴 **CRITICAL**
 
-  - [ ] Update `github.rs` with diff fetching and parsing
+  - [ ] Update `github/src/client.rs` with diff fetching and parsing
   - [ ] Parse unified diff format from GitHub API
-  - [ ] Convert to `DiffFile` and `DiffHunk` structures
+  - [ ] Convert to `DiffFile` and `DiffHunk` structures from `chadreview_pr_models`
   - [ ] Add tests for diff parsing
 
-- [ ] Create `src/syntax.rs` for syntax highlighting 🔴 **CRITICAL**
+### 4.2 Syntax Highlighting Package
 
-  - [ ] Add `pub mod syntax;` to `lib.rs`
+- [ ] Add syntect dependency to `packages/syntax/Cargo.toml` 🔴 **CRITICAL**
+
+  - [ ] Add to `[dependencies]`:
+    ```toml
+    chadreview_pr_models = { workspace = true }
+    syntect = { workspace = true, features = ["default-syntaxes", "default-themes", "html"] }
+    ```
+
+- [ ] Implement syntax highlighting in `syntax/src/lib.rs` 🔴 **CRITICAL**
+
   - [ ] Implement `SyntaxHighlighter` struct
   - [ ] Add language detection from file extensions
   - [ ] Generate highlighted HTML for each line
+  - [ ] Add `highlight_diff` method that takes `&mut DiffFile`
   - [ ] Add tests for highlighting various languages
 
-#### 4.1 Verification Checklist
+  ```rust
+  use chadreview_pr_models::DiffFile;
+  use syntect::parsing::SyntaxSet;
+  use syntect::highlighting::ThemeSet;
+
+  pub struct SyntaxHighlighter {
+      syntax_set: SyntaxSet,
+      theme_set: ThemeSet,
+  }
+
+  impl SyntaxHighlighter {
+      pub fn new() -> Self {
+          Self {
+              syntax_set: SyntaxSet::load_defaults_newlines(),
+              theme_set: ThemeSet::load_defaults(),
+          }
+      }
+
+      pub fn highlight_diff(&self, diff_file: &mut DiffFile) {
+          // Implementation
+      }
+  }
+  ```
+
+#### 4.1-4.2 Verification Checklist
 
 - [ ] Diff parsing handles all file statuses (added/modified/deleted/renamed)
 - [ ] Syntax highlighting works for common languages (Rust, JS, Python, etc.)
 - [ ] Fallback to plain text for unknown languages
 - [ ] HTML output is properly escaped
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_core -- -D warnings` (zero warnings)
-- [ ] Run `cargo test -p chadreview_core` (all tests pass)
+- [ ] Run `cargo clippy --all-targets -p chadreview_github -- -D warnings` (zero warnings)
+- [ ] Run `cargo clippy --all-targets -p chadreview_syntax -- -D warnings` (zero warnings)
+- [ ] Run `cargo test -p chadreview_github` (all tests pass)
+- [ ] Run `cargo test -p chadreview_syntax` (all tests pass)
 - [ ] Run `cargo machete` (all dependencies used)
 
 ## Phase 5: Comment Fetching and Threading 🔴 **NOT STARTED**
@@ -852,8 +1422,8 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 - [ ] Nested replies properly structured
 - [ ] Comment types correctly identified (general/file-level/line-level)
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_core -- -D warnings` (zero warnings)
-- [ ] Run `cargo test -p chadreview_core` (all tests pass)
+- [ ] Run `cargo clippy --all-targets -p chadreview_github -- -D warnings` (zero warnings)
+- [ ] Run `cargo test -p chadreview_github` (all tests pass)
 - [ ] Run `cargo machete` (all dependencies used)
 
 ## Phase 6: Comment Creation and Mutation 🔴 **NOT STARTED**
@@ -888,44 +1458,59 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 - [ ] Proper error handling for unauthorized operations
 - [ ] Tests cover success and failure cases
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_core -- -D warnings` (zero warnings)
-- [ ] Run `cargo test -p chadreview_core` (all tests pass)
+- [ ] Run `cargo clippy --all-targets -p chadreview_github -- -D warnings` (zero warnings)
+- [ ] Run `cargo test -p chadreview_github` (all tests pass)
 - [ ] Run `cargo machete` (all dependencies used)
 
 ## Phase 7: HyperChad Application Setup 🔴 **NOT STARTED**
 
-**Goal:** Set up HyperChad application structure with routing
+**Goal:** Set up HyperChad application structure with routing and integrate with domain crates
 
 **Status:** All tasks pending
 
+**CRITICAL NOTES:**
+
+- Application depends on `chadreview_app_ui` (separate crate in `app/ui/`)
+- State management uses `chadreview_state` crate
+- Import UI components from `chadreview_app_ui` crate in routes
+
 ### 7.1 HyperChad Integration
 
-- [ ] Add HyperChad dependencies to `packages/app/Cargo.toml` 🔴 **CRITICAL**
+- [ ] Add dependencies to `packages/app/Cargo.toml` 🔴 **CRITICAL**
 
   - [ ] Verify HyperChad git dependency resolves correctly
+  - [ ] Add internal crate dependencies:
+    ```toml
+    chadreview_app_ui = { workspace = true }
+    chadreview_state = { workspace = true }
+    chadreview_git_provider = { workspace = true }
+    chadreview_github = { workspace = true }
+    chadreview_pr_models = { workspace = true }
+    ```
   - [ ] Add HyperChad packages:
     ```toml
-    hyperchad = { workspace = true }
-    hyperchad_app = { workspace = true }
-    hyperchad_renderer = { workspace = true }
-    hyperchad_renderer_html = { workspace = true, optional = true }
-    hyperchad_renderer_vanilla_js = { workspace = true, optional = true }
-    hyperchad_router = { workspace = true }
-    hyperchad_state = { workspace = true }
-    hyperchad_template = { workspace = true }
-    tokio = { workspace = true }
-    anyhow = { workspace = true }
+    hyperchad = { workspace = true, features = ["app", "router"] }
+    tokio = { workspace = true, features = ["full"] }
+    anyhow = { workspace = true, features = ["std"] }
     ```
 
 - [ ] Create application structure 🔴 **CRITICAL**
 
-  - [ ] Create `src/state.rs` for application state
-  - [ ] Create `src/routes.rs` for route handlers
-  - [ ] Create `src/components/` directory for UI components
+  - [ ] Create `src/lib.rs` with module declarations
+  - [ ] Create `src/routes.rs` for route handlers (imports from `chadreview_app_ui`)
+  - [ ] Create `src/actions.rs` for action handlers
+  - [ ] Create `src/events.rs` for event handlers
   - [ ] Update `main.rs` with HyperChad initialization
+  - [ ] **NOTE**: State is in `packages/state/` crate, UI components in `packages/app/ui/` crate
 
 - [ ] Implement basic routing 🔴 **CRITICAL**
 
+  - [ ] Import UI components in routes.rs:
+    ```rust
+    use chadreview_app_ui::{pr_header, diff_viewer, comment_thread};
+    use chadreview_state::AppState;
+    use chadreview_git_provider::GitProvider;
+    ```
   - [ ] Route: `GET /pr/:owner/:repo/:number` - Main PR view
   - [ ] Route: `POST /api/pr/:owner/:repo/:number/comment` - Create comment
   - [ ] Route: `PUT /api/comment/:id` - Update comment
@@ -937,7 +1522,7 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 - [ ] Server starts and listens on configured port
 - [ ] Routes registered correctly
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_app -- -D warnings` (zero warnings)
+- [ ] Run `cargo clippy --all-targets -p chadreview_app_ui -- -D warnings` (zero warnings)
 - [ ] Run `cargo build -p chadreview_app` (compiles)
 - [ ] Run `cargo run -p chadreview_app` (starts server)
 
@@ -947,9 +1532,14 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 
 **Status:** All tasks pending
 
+**CRITICAL NOTES:**
+
+- UI components are in `packages/app/ui/` crate (`chadreview_app_ui`)
+- Components imported by main app via `use chadreview_app_ui::pr_header;`
+
 ### 8.1 PR Header Component
 
-- [ ] Create `src/components/pr_header.rs` 🔴 **CRITICAL**
+- [ ] Create `packages/app/ui/src/pr_header.rs` 🔴 **CRITICAL**
 
   - [ ] Render PR title
   - [ ] Render PR description (markdown-to-HTML)
@@ -973,7 +1563,7 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 - [ ] Styling is clean and uncluttered
 - [ ] Component updates via SSE when PR changes
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_app -- -D warnings` (zero warnings)
+- [ ] Run `cargo clippy --all-targets -p chadreview_app_ui -- -D warnings` (zero warnings)
 - [ ] Run `cargo build -p chadreview_app` (compiles)
 - [ ] Manual testing: View real PR, verify all fields display
 
@@ -983,9 +1573,14 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 
 **Status:** All tasks pending
 
+**CRITICAL NOTES:**
+
+- UI components are in `packages/app/ui/` crate (`chadreview_app_ui`)
+- Components imported by main app via `use chadreview_app_ui::diff_viewer;`
+
 ### 9.1 Diff Viewer Component
 
-- [ ] Create `src/components/diff_viewer.rs` 🔴 **CRITICAL**
+- [ ] Create `packages/app/ui/src/diff_viewer.rs` 🔴 **CRITICAL**
 
   - [ ] Render file list with status indicators
   - [ ] Render each file's diff hunks
@@ -1010,7 +1605,7 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 - [ ] Line numbers align correctly
 - [ ] Large diffs render without performance issues
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_app -- -D warnings` (zero warnings)
+- [ ] Run `cargo clippy --all-targets -p chadreview_app_ui -- -D warnings` (zero warnings)
 - [ ] Manual testing: View large PR (50+ files), verify performance
 
 ## Phase 10: UI Components - Comment Threads 🔴 **NOT STARTED**
@@ -1019,9 +1614,14 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 
 **Status:** All tasks pending
 
+**CRITICAL NOTES:**
+
+- UI components are in `packages/app/ui/` crate (`chadreview_app_ui`)
+- Components imported by main app via `use chadreview_app_ui::comment_thread;`
+
 ### 10.1 Comment Thread Component
 
-- [ ] Create `src/components/comment_thread.rs` 🔴 **CRITICAL**
+- [ ] Create `packages/app/ui/src/comment_thread.rs` 🔴 **CRITICAL**
 
   - [ ] Render line-level comments under code lines
   - [ ] Render file-level comments at top of file diff
@@ -1066,7 +1666,7 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 - [ ] Delete comment removes from UI
 - [ ] All actions update via SSE for other viewers
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_app -- -D warnings` (zero warnings)
+- [ ] Run `cargo clippy --all-targets -p chadreview_app_ui -- -D warnings` (zero warnings)
 - [ ] Manual testing: Create/reply/edit/delete comments on real PR
 
 ## Phase 11: UI Components - General Comments 🔴 **NOT STARTED**
@@ -1075,9 +1675,14 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 
 **Status:** All tasks pending
 
+**CRITICAL NOTES:**
+
+- UI components are in `packages/app/ui/` crate (`chadreview_app_ui`)
+- Components imported by main app via `use chadreview_app_ui::general_comments;`
+
 ### 11.1 General Comments Component
 
-- [ ] Create `src/components/general_comments.rs` 🔴 **CRITICAL**
+- [ ] Create `packages/app/ui/src/general_comments.rs` 🔴 **CRITICAL**
 
   - [ ] Render general comments section below diff viewer
   - [ ] Display all general PR comments
@@ -1092,7 +1697,7 @@ ChadReview is a high-performance GitHub PR review tool built on the HyperChad fr
 - [ ] All CRUD operations work
 - [ ] Real-time updates via SSE
 - [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_app -- -D warnings` (zero warnings)
+- [ ] Run `cargo clippy --all-targets -p chadreview_app_ui -- -D warnings` (zero warnings)
 
 ## Phase 12: End-to-End Testing and Polish 🔴 **NOT STARTED**
 
@@ -1194,7 +1799,7 @@ The following criteria must be met for the MVP to be considered successful:
 
 ### Language and Framework
 
-- **Rust** with standard toolchain (edition 2021)
+- **Rust** with standard toolchain (edition 2024)
 - **BTreeMap/BTreeSet** for all collections (never HashMap/HashSet)
 - **Workspace dependencies** using `{ workspace = true }`
 - **Underscore naming** for all packages
