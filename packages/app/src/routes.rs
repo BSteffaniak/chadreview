@@ -85,8 +85,9 @@ async fn pr_route(
     let number: u64 = number_str.parse()?;
 
     let pr = provider.get_pr(owner, repo, number).await?;
+    let diffs = provider.get_diff(owner, repo, number).await?;
 
-    Ok(render_pr_view(&pr))
+    Ok(render_pr_view(&pr, &diffs))
 }
 
 async fn create_comment_route(
@@ -162,12 +163,16 @@ async fn delete_comment_route(
     Ok(())
 }
 
-fn render_pr_view(pr: &chadreview_pr_models::PullRequest) -> Container {
+fn render_pr_view(
+    pr: &chadreview_pr_models::PullRequest,
+    diffs: &[chadreview_pr_models::DiffFile],
+) -> Container {
     use hyperchad::template::container;
 
     container! {
         div class="pr-view" {
             (chadreview_app_ui::pr_header::render_pr_header(pr))
+            (chadreview_app_ui::diff_viewer::render(diffs))
         }
     }
     .into()
