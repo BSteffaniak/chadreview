@@ -83,7 +83,9 @@ fn render_metadata(pr: &PullRequest) -> Container {
             div direction=row gap=24 margin-bottom=12 {
                 div direction=row align-items=center gap=8 {
                     span color="#57606a" font-weight=600 { "Author:" }
-                    span color="#0969da" font-weight=600 { (pr.author.username.as_str()) }
+                    anchor href=(pr.author.html_url.as_str()) color="#0969da" font-weight=600 {
+                        (pr.author.username.as_str())
+                    }
                 }
                 div direction=row align-items=center gap=8 {
                     span color="#57606a" font-weight=600 { "Branch:" }
@@ -177,7 +179,7 @@ fn render_assignees(assignees: &[chadreview_pr_models::User]) -> Container {
         div direction=row align-items=center gap=8 {
             span color="#57606a" font-weight=600 { "Assignees:" }
             @for assignee in assignees {
-                span color="#0969da" font-weight=600 {
+                anchor href=(assignee.html_url.as_str()) color="#0969da" font-weight=600 {
                     (assignee.username.as_str())
                 }
             }
@@ -195,7 +197,7 @@ fn render_reviewers(reviewers: &[chadreview_pr_models::User]) -> Container {
         div direction=row align-items=center gap=8 {
             span color="#57606a" font-weight=600 { "Reviewers:" }
             @for reviewer in reviewers {
-                span color="#0969da" font-weight=600 {
+                anchor href=(reviewer.html_url.as_str()) color="#0969da" font-weight=600 {
                     (reviewer.username.as_str())
                 }
             }

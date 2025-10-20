@@ -1583,12 +1583,12 @@ Created packages/github/src/client.rs with complete implementation including Git
           `packages/app/ui/src/pr_header.rs:23-28,42-51` - renders state badge with inline `background`, `color`, `padding`, `border-radius`, `font-size`, `font-weight`
     - [x] Render draft indicator
           `packages/app/ui/src/pr_header.rs:58-72` - conditionally renders draft badge with inline styling
-    - [x] Render author info
-          `packages/app/ui/src/pr_header.rs:82-85` - renders author username with inline `color`, `font-weight`
+    - [x] Render author info with clickable link
+          `packages/app/ui/src/pr_header.rs:85-89` - renders author username as clickable `anchor` element linking to GitHub profile via `html_url`
     - [x] Render labels
           `packages/app/ui/src/pr_header.rs:125-141` - renders labels with inline `padding`, `border-radius`, `font-size`, `font-weight`, `background`, `color`, `border`
-    - [x] Render assignees and reviewers
-          `packages/app/ui/src/pr_header.rs:144-201` - renders both with inline `flex`, `gap`, `align-items`, `color`, `font-weight`
+    - [x] Render assignees and reviewers with clickable links
+          `packages/app/ui/src/pr_header.rs:177-185,195-203` - renders both as clickable `anchor` elements linking to GitHub profiles via `html_url`
     - [x] Render branch information
           `packages/app/ui/src/pr_header.rs:87-108` - renders branches with inline `font-family="monospace"`, `font-size`, `padding`, `background`, `border-radius`, `color`
     - [x] Render timestamps (created, updated)
