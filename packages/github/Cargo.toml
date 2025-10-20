@@ -11,9 +11,16 @@ repository  = { workspace = true }
 version     = { workspace = true }
 
 [dependencies]
+anyhow                   = { workspace = true, features = ["std"] }
+async-trait              = { workspace = true }
 chadreview_git_provider  = { workspace = true }
 chadreview_github_models = { workspace = true }
 chadreview_pr_models     = { workspace = true }
+chrono                   = { workspace = true }
+reqwest                  = { workspace = true, features = ["json"] }
+serde_json               = { workspace = true }
+thiserror                = { workspace = true }
+tokio                    = { workspace = true, features = ["full"] }
 
 [features]
 default = []
@@ -24,3 +31,5 @@ fail-on-warnings = [
 ]
 
 [dev-dependencies]
+tokio-test = "0.4"
+wiremock   = "0.5"

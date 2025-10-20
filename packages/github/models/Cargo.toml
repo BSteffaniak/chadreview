@@ -12,6 +12,8 @@ version     = { workspace = true }
 
 [dependencies]
 chadreview_pr_models = { workspace = true }
+chrono               = { workspace = true, features = ["serde", "std"] }
+serde                = { workspace = true, features = ["derive", "std"] }
 
 [features]
 default          = []

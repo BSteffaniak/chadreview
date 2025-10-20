@@ -80,7 +80,7 @@ pub trait GitProvider: Send + Sync {
     ///
     /// # Returns
     /// Provider name string (e.g., "github", "gitlab", "bitbucket")
-    fn provider_name(&self) -> &str;
+    fn provider_name(&self) -> &'static str;
 
     /// Indicates whether the provider supports draft pull requests.
     ///
