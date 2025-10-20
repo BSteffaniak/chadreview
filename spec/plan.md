@@ -710,172 +710,172 @@ chrono = { workspace = true, features = ["serde", "std"] }
 - [x] Create `pr/models/src/lib.rs` with module exports 🔴 **CRITICAL** - [x] Update `packages/pr/models/src/lib.rs`:
       Created with all module declarations and re-exports at packages/pr/models/src/lib.rs
 
-                    ```rust
-                    #![cfg_attr(feature = "fail-on-warnings", deny(warnings))]
-                    #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
-                    #![allow(clippy::multiple_crate_versions)]
+    ```rust
+    #![cfg_attr(feature = "fail-on-warnings", deny(warnings))]
+    #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
+    #![allow(clippy::multiple_crate_versions)]
 
-                    pub mod pr;
-                    pub mod diff;
-                    pub mod comment;
-                    pub mod user;
+    pub mod pr;
+    pub mod diff;
+    pub mod comment;
+    pub mod user;
 
-                    // Re-export commonly used types
-                    pub use pr::{PrState, PullRequest};
-                    pub use diff::{DiffFile, DiffHunk, DiffLine, FileStatus, LineType};
-                    pub use comment::{Comment, CommentType, CreateComment};
-                    pub use user::{Commit, Label, User};
-                    ```
+    // Re-export commonly used types
+    pub use pr::{PrState, PullRequest};
+    pub use diff::{DiffFile, DiffHunk, DiffLine, FileStatus, LineType};
+    pub use comment::{Comment, CommentType, CreateComment};
+    pub use user::{Commit, Label, User};
+    ```
 
 - [x] Create `pr/models/src/pr.rs` with PR types 🔴 **CRITICAL** - [x] Implement complete PR type definitions:
       Created packages/pr/models/src/pr.rs with PullRequest struct and PrState enum
 
-                    ```rust
-                    use chrono::{DateTime, Utc};
-                    use serde::{Deserialize, Serialize};
-                    use crate::user::{Commit, Label, User};
+    ```rust
+    use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Serialize};
+    use crate::user::{Commit, Label, User};
 
-                    #[derive(Debug, Clone, Serialize, Deserialize)]
-                    pub struct PullRequest {
-                        pub number: u64,
-                        pub owner: String,
-                        pub repo: String,
-                        pub title: String,
-                        pub description: String,
-                        pub author: User,
-                        pub state: PrState,
-                        pub draft: bool,
-                        pub base_branch: String,
-                        pub head_branch: String,
-                        pub labels: Vec<Label>,
-                        pub assignees: Vec<User>,
-                        pub reviewers: Vec<User>,
-                        pub commits: Vec<Commit>,
-                        pub created_at: DateTime<Utc>,
-                        pub updated_at: DateTime<Utc>,
-                        pub provider: String,
-                    }
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PullRequest {
+        pub number: u64,
+        pub owner: String,
+        pub repo: String,
+        pub title: String,
+        pub description: String,
+        pub author: User,
+        pub state: PrState,
+        pub draft: bool,
+        pub base_branch: String,
+        pub head_branch: String,
+        pub labels: Vec<Label>,
+        pub assignees: Vec<User>,
+        pub reviewers: Vec<User>,
+        pub commits: Vec<Commit>,
+        pub created_at: DateTime<Utc>,
+        pub updated_at: DateTime<Utc>,
+        pub provider: String,
+    }
 
-                    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-                    pub enum PrState {
-                        Open,
-                        Closed,
-                        Merged,
-                    }
-                    ```
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+    pub enum PrState {
+        Open,
+        Closed,
+        Merged,
+    }
+    ```
 
 - [x] Create `pr/models/src/diff.rs` with diff types 🔴 **CRITICAL** - [x] Implement diff type definitions:
       Created packages/pr/models/src/diff.rs with DiffFile, DiffHunk, DiffLine, FileStatus, and LineType
 
-                    ```rust
-                    use serde::{Deserialize, Serialize};
+    ```rust
+    use serde::{Deserialize, Serialize};
 
-                    #[derive(Debug, Clone, Serialize, Deserialize)]
-                    pub struct DiffFile {
-                        pub filename: String,
-                        pub status: FileStatus,
-                        pub additions: usize,
-                        pub deletions: usize,
-                        pub hunks: Vec<DiffHunk>,
-                    }
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct DiffFile {
+        pub filename: String,
+        pub status: FileStatus,
+        pub additions: usize,
+        pub deletions: usize,
+        pub hunks: Vec<DiffHunk>,
+    }
 
-                    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-                    pub enum FileStatus {
-                        Added,
-                        Modified,
-                        Deleted,
-                        Renamed,
-                    }
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+    pub enum FileStatus {
+        Added,
+        Modified,
+        Deleted,
+        Renamed,
+    }
 
-                    #[derive(Debug, Clone, Serialize, Deserialize)]
-                    pub struct DiffHunk {
-                        pub old_start: usize,
-                        pub old_lines: usize,
-                        pub new_start: usize,
-                        pub new_lines: usize,
-                        pub lines: Vec<DiffLine>,
-                    }
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct DiffHunk {
+        pub old_start: usize,
+        pub old_lines: usize,
+        pub new_start: usize,
+        pub new_lines: usize,
+        pub lines: Vec<DiffLine>,
+    }
 
-                    #[derive(Debug, Clone, Serialize, Deserialize)]
-                    pub struct DiffLine {
-                        pub line_type: LineType,
-                        pub old_line_number: Option<usize>,
-                        pub new_line_number: Option<usize>,
-                        pub content: String,
-                        pub highlighted_html: String,
-                    }
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct DiffLine {
+        pub line_type: LineType,
+        pub old_line_number: Option<usize>,
+        pub new_line_number: Option<usize>,
+        pub content: String,
+        pub highlighted_html: String,
+    }
 
-                    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-                    pub enum LineType {
-                        Addition,
-                        Deletion,
-                        Context,
-                    }
-                    ```
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+    pub enum LineType {
+        Addition,
+        Deletion,
+        Context,
+    }
+    ```
 
 - [x] Create `pr/models/src/comment.rs` with comment types 🔴 **CRITICAL** - [x] Implement comment type definitions:
       Created packages/pr/models/src/comment.rs with Comment, CommentType, and CreateComment
 
-                    ```rust
-                    use chrono::{DateTime, Utc};
-                    use serde::{Deserialize, Serialize};
-                    use crate::user::User;
+    ```rust
+    use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Serialize};
+    use crate::user::User;
 
-                    #[derive(Debug, Clone, Serialize, Deserialize)]
-                    pub struct Comment {
-                        pub id: u64,
-                        pub author: User,
-                        pub body: String,
-                        pub created_at: DateTime<Utc>,
-                        pub updated_at: DateTime<Utc>,
-                        pub comment_type: CommentType,
-                        pub replies: Vec<Comment>,
-                    }
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Comment {
+        pub id: u64,
+        pub author: User,
+        pub body: String,
+        pub created_at: DateTime<Utc>,
+        pub updated_at: DateTime<Utc>,
+        pub comment_type: CommentType,
+        pub replies: Vec<Comment>,
+    }
 
-                    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-                    pub enum CommentType {
-                        General,
-                        FileLevelComment { path: String },
-                        LineLevelComment { path: String, line: usize },
-                    }
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+    pub enum CommentType {
+        General,
+        FileLevelComment { path: String },
+        LineLevelComment { path: String, line: usize },
+    }
 
-                    #[derive(Debug, Clone, Serialize, Deserialize)]
-                    pub struct CreateComment {
-                        pub body: String,
-                        pub comment_type: CommentType,
-                        pub in_reply_to: Option<u64>,
-                    }
-                    ```
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct CreateComment {
+        pub body: String,
+        pub comment_type: CommentType,
+        pub in_reply_to: Option<u64>,
+    }
+    ```
 
 - [x] Create `pr/models/src/user.rs` with user types 🔴 **CRITICAL** - [x] Implement user type definitions:
       Created packages/pr/models/src/user.rs with User, Label, and Commit
 
-                    ```rust
-                    use chrono::{DateTime, Utc};
-                    use serde::{Deserialize, Serialize};
+    ```rust
+    use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Serialize};
 
-                    #[derive(Debug, Clone, Serialize, Deserialize)]
-                    pub struct User {
-                        pub id: String,
-                        pub username: String,
-                        pub avatar_url: String,
-                        pub html_url: String,
-                    }
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct User {
+        pub id: String,
+        pub username: String,
+        pub avatar_url: String,
+        pub html_url: String,
+    }
 
-                    #[derive(Debug, Clone, Serialize, Deserialize)]
-                    pub struct Label {
-                        pub name: String,
-                        pub color: String,
-                    }
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Label {
+        pub name: String,
+        pub color: String,
+    }
 
-                    #[derive(Debug, Clone, Serialize, Deserialize)]
-                    pub struct Commit {
-                        pub sha: String,
-                        pub message: String,
-                        pub author: User,
-                        pub committed_at: DateTime<Utc>,
-                    }
-                    ```
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Commit {
+        pub sha: String,
+        pub message: String,
+        pub author: User,
+        pub committed_at: DateTime<Utc>,
+    }
+    ```
 
 - [x] ~~Add unit tests for model serialization~~ (Removed - serialization tests are redundant)
 
@@ -918,41 +918,41 @@ async-trait = { workspace = true }
 
 - [x] Create `git_provider/src/provider.rs` with `GitProvider` trait 🔴 **CRITICAL** - [x] Add `pub mod provider;` to `git_provider/src/lib.rs` - [x] Re-export in lib.rs: `pub use provider::GitProvider;` - [x] Define complete `GitProvider` trait:
 
-                    ```rust
-                    use chadreview_pr_models::{Comment, CreateComment, DiffFile, PullRequest};
-                    use anyhow::Result;
+    ```rust
+    use chadreview_pr_models::{Comment, CreateComment, DiffFile, PullRequest};
+    use anyhow::Result;
 
-                    #[async_trait::async_trait]
-                    pub trait GitProvider: Send + Sync {
-                        async fn get_pr(&self, owner: &str, repo: &str, number: u64) -> Result<PullRequest>;
+    #[async_trait::async_trait]
+    pub trait GitProvider: Send + Sync {
+        async fn get_pr(&self, owner: &str, repo: &str, number: u64) -> Result<PullRequest>;
 
-                        async fn get_diff(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<DiffFile>>;
+        async fn get_diff(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<DiffFile>>;
 
-                        async fn get_comments(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<Comment>>;
+        async fn get_comments(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<Comment>>;
 
-                        async fn create_comment(
-                            &self,
-                            owner: &str,
-                            repo: &str,
-                            number: u64,
-                            comment: CreateComment,
-                        ) -> Result<Comment>;
+        async fn create_comment(
+            &self,
+            owner: &str,
+            repo: &str,
+            number: u64,
+            comment: CreateComment,
+        ) -> Result<Comment>;
 
-                        async fn update_comment(&self, comment_id: u64, body: String) -> Result<Comment>;
+        async fn update_comment(&self, comment_id: u64, body: String) -> Result<Comment>;
 
-                        async fn delete_comment(&self, comment_id: u64) -> Result<()>;
+        async fn delete_comment(&self, comment_id: u64) -> Result<()>;
 
-                        fn provider_name(&self) -> &str;
+        fn provider_name(&self) -> &str;
 
-                        fn supports_drafts(&self) -> bool {
-                            false
-                        }
+        fn supports_drafts(&self) -> bool {
+            false
+        }
 
-                        fn supports_line_comments(&self) -> bool {
-                            true
-                        }
-                    }
-                    ```
+        fn supports_line_comments(&self) -> bool {
+            true
+        }
+    }
+    ```
 
     Created packages/git_provider/src/provider.rs with complete GitProvider trait definition. Updated lib.rs with module declaration and re-export.
 
@@ -983,10 +983,10 @@ async-trait = { workspace = true }
 
 - [x] Add required dependencies to `packages/github/models/Cargo.toml` 🔴 **CRITICAL** - [x] Add to `[dependencies]`:
       `toml
-    chadreview_pr_models = { workspace = true }
-    serde = { workspace = true, features = ["derive"] }
-    chrono = { workspace = true, features = ["serde"] }
-    `
+chadreview_pr_models = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+chrono = { workspace = true, features = ["serde"] }
+`
       Added serde with ["derive", "std"] and chrono with ["serde", "std"] features (following workspace pattern of explicit std)
 
 - [x] Create `github/models/src/lib.rs` with GitHub API response types 🔴 **CRITICAL**
@@ -1032,21 +1032,21 @@ async-trait = { workspace = true }
 
 - [x] Add required dependencies to `packages/github/Cargo.toml` 🔴 **CRITICAL** - [x] Add to `[dependencies]`:
       `toml
-    chadreview_github_models = { workspace = true }
-    chadreview_git_provider = { workspace = true }
-    chadreview_pr_models = { workspace = true }
-    reqwest = { workspace = true, features = ["json"] }
-    anyhow = { workspace = true, features = ["std"] }
-    thiserror = { workspace = true }
-    tokio = { workspace = true, features = ["full"] }
-    serde_json = { workspace = true }
-    async-trait = { workspace = true }
-    chrono = { workspace = true }
-    ` - [x] Add to `[dev-dependencies]`:
+chadreview_github_models = { workspace = true }
+chadreview_git_provider = { workspace = true }
+chadreview_pr_models = { workspace = true }
+reqwest = { workspace = true, features = ["json"] }
+anyhow = { workspace = true, features = ["std"] }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+` - [x] Add to `[dev-dependencies]`:
       `toml
-    wiremock = "0.5"
-    tokio-test = "0.4"
-    ` - [x] **VERIFICATION**: Run `cargo tree -p chadreview_github`
+wiremock = "0.5"
+tokio-test = "0.4"
+` - [x] **VERIFICATION**: Run `cargo tree -p chadreview_github`
       All dependencies added successfully and verified with cargo tree
 
 - [x] Create `github/src/client.rs` with GitHub HTTP client 🔴 **CRITICAL**
@@ -1435,6 +1435,8 @@ Created packages/github/src/client.rs with complete implementation including Git
       Fixed cast truncation and items-after-statements warnings
 - [x] Run `cargo test -p chadreview_github` (all tests pass) ✅
       All 10 tests pass (6 existing + 4 new comment tests)
+- [x] Run `cargo machete` (all dependencies used) ✅
+      Cleaned up 18 unused dependencies across 9 packages from earlier phases
 
 **Completion Proof:**
 

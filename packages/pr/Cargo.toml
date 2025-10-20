@@ -11,10 +11,9 @@ repository  = { workspace = true }
 version     = { workspace = true }
 
 [dependencies]
-chadreview_pr_models = { workspace = true }
 
 [features]
 default          = []
-fail-on-warnings = ["chadreview_pr_models/fail-on-warnings"]
+fail-on-warnings = []
 
 [dev-dependencies]

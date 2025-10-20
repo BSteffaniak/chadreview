@@ -15,37 +15,25 @@ name = "chadreview"
 path = "src/main.rs"
 
 [dependencies]
-chadreview_app_ui       = { workspace = true }
-chadreview_git_provider = { workspace = true }
-chadreview_github       = { workspace = true, optional = true }
-chadreview_state        = { workspace = true }
-hyperchad               = { workspace = true, features = ["app", "router"] }
 
 [features]
-default = ["github", "html", "vanilla-js"]
+default = []
 
 bitbucket = []
-github    = ["chadreview_github"]
+github    = []
 gitlab    = []
 
-egui-glow  = ["hyperchad/renderer-egui-glow"]
-egui-wgpu  = ["hyperchad/renderer-egui-wgpu"]
-fltk       = ["hyperchad/renderer-fltk"]
-html       = ["hyperchad/renderer-html"]
-vanilla-js = ["html", "hyperchad/renderer-vanilla-js"]
+actix         = []
+assets        = []
+dev           = []
+egui-glow     = []
+egui-wgpu     = []
+fltk          = []
+html          = []
+lambda        = []
+static-routes = []
+vanilla-js    = []
 
-actix  = ["hyperchad/renderer-html-actix"]
-lambda = ["hyperchad/renderer-html-lambda"]
-
-assets        = ["hyperchad/renderer-assets"]
-dev           = ["assets", "static-routes"]
-static-routes = ["hyperchad/router-static-routes"]
-
-fail-on-warnings = [
-    "chadreview_app_ui/fail-on-warnings",
-    "chadreview_git_provider/fail-on-warnings",
-    "chadreview_github/fail-on-warnings",
-    "chadreview_state/fail-on-warnings",
-]
+fail-on-warnings = []
 
 [dev-dependencies]
