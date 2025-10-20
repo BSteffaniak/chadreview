@@ -1692,62 +1692,303 @@ Created packages/github/src/client.rs with complete implementation including Git
 - [x] Manual testing: View large PR (50+ files), verify performance
       Ready for manual testing - component renders all files with file-level horizontal scrolling
 
-## Phase 10: UI Components - Comment Threads 🔴 **NOT STARTED**
+## Phase 10: UI Components - Comment Threads 🔴 **READY TO START**
 
-**Goal:** Render inline comment threads with create/reply/edit/delete
+**Goal:** Render inline comment threads with create/reply/edit/delete using HyperChad HTMX-style attributes
 
-**Status:** All tasks pending
+**Status:** Ready to implement
 
 **CRITICAL NOTES:**
 
-- UI components are in `packages/app/ui/` crate (`chadreview_app_ui`)
+**HYPERCHAD HTMX-STYLE ARCHITECTURE:**
+
+- ✅ **NO VanillaJS needed** - HyperChad provides HTMX-inspired `hx-*` attributes for server actions
+- ✅ **NO `actions.rs` handlers needed** - Routes already handle all API endpoints
+- ✅ **HTMX-style attributes:** Use `hx-post`, `hx-put`, `hx-delete`, `hx-get` on forms/buttons
+- ✅ **UI-only interactions:** Use `fx-click=fx { show/hide/toggle_visibility }` for client-side state
+- ✅ **SSE automatic:** All form submissions → route handlers → GitHub API → SSE push → all clients update
+
+**HX ATTRIBUTE REFERENCE:**
+
+```rust
+// HTTP methods
+hx-get="/path"           // GET request
+hx-post="/path"          // POST request
+hx-put="/path"           // PUT request
+hx-patch="/path"         // PATCH request
+hx-delete="/path"        // DELETE request
+
+// Response handling
+hx-swap=(SwapTarget::Id("element-id"))   // Replace element by ID
+hx-swap=(SwapTarget::This)                // Replace element itself
+hx-swap=(SwapTarget::Children)            // Replace children
+```
+
+**INTEGRATION REQUIREMENTS:**
+
+- ✅ Fetch comments in route handler (`packages/app/src/routes.rs`)
+- ✅ Pass comments to diff viewer component
+- ✅ Update `diff_viewer::render()` signature: `render(diffs: &[DiffFile], comments: &[Comment])`
+- ✅ Filter comments by file path and line number when rendering
+
+**UI COMPONENT STRUCTURE:**
+
+- UI components in `packages/app/ui/` crate (`chadreview_app_ui`)
 - Components imported by main app via `use chadreview_app_ui::comment_thread;`
 
-### 10.1 Comment Thread Component
+### 10.1 Prerequisites: Route and Diff Viewer Updates 🔴 **CRITICAL**
 
-- [ ] Create `packages/app/ui/src/comment_thread.rs` 🔴 **CRITICAL**
-    - [ ] Render line-level comments under code lines
-    - [ ] Render file-level comments at top of file diff
-    - [ ] Render nested replies with indentation
-    - [ ] Display comment author, timestamp, body
-    - [ ] Add "Reply" button for each comment
-    - [ ] Add "Edit" button for user's own comments
-    - [ ] Add "Delete" button for user's own comments
-    - [ ] Add "+ Add comment" button on each code line
+- [ ] Update `packages/app/src/routes.rs:pr_route()` to fetch comments
+    - [ ] Add `let comments = provider.get_comments(owner, repo, number).await?;`
+    - [ ] Update `render_pr_view()` call to pass comments: `render_pr_view(&pr, &diffs, &comments)`
 
-- [ ] Implement comment form 🔴 **CRITICAL**
-    - [ ] Textarea for comment body
-    - [ ] Submit and cancel buttons
-    - [ ] Form validation
-    - [ ] Loading state during API call
-    - [ ] Error handling and display
+- [ ] Update `render_pr_view()` signature in `routes.rs`
+    - [ ] Add `comments: &[chadreview_pr_models::Comment]` parameter
+    - [ ] Pass comments to diff viewer: `diff_viewer::render(&diffs, &comments)`
 
-- [ ] Wire up comment actions 🔴 **CRITICAL**
-    - [ ] Create comment: POST to `/api/pr/:owner/:repo/:number/comment`
-    - [ ] Update comment: PUT to `/api/comment/:id`
-    - [ ] Delete comment: DELETE to `/api/comment/:id`
-    - [ ] Handle API responses and errors
-    - [ ] Optimistic UI updates with rollback on error
+- [ ] Update `packages/app/ui/src/diff_viewer.rs` signature
+    - [ ] Add `use chadreview_pr_models::Comment;` import
+    - [ ] Change `render()` to accept: `pub fn render(diffs: &[DiffFile], comments: &[Comment])`
+    - [ ] Update `render_file()` to accept `comments: &[Comment]` and filter by filename
+    - [ ] Pass owner/repo/number through render chain (needed for form API URLs)
 
-- [ ] Add VanillaJS for interactions 🟡 **IMPORTANT**
-    - [ ] Create `assets/comments.js`
-    - [ ] Handle "Reply" button clicks (show/hide form)
-    - [ ] Handle form submissions (fetch API)
-    - [ ] Handle "Edit" button (inline editing)
-    - [ ] Handle "Delete" with confirmation
+- [ ] Update line rendering to check for and display comments
+    - [ ] After each line, check if comments exist for that line number
+    - [ ] Render comment thread if matches found
+    - [ ] Render "+ Add comment" button and hidden form for each line
 
-#### 10.1 Verification Checklist
+**Verification:**
 
-- [ ] Comments render inline correctly
-- [ ] Nested replies display with proper indentation
-- [ ] Create comment works for all comment types
-- [ ] Reply to comment creates nested thread
-- [ ] Edit comment updates in place
-- [ ] Delete comment removes from UI
-- [ ] All actions update via SSE for other viewers
+- [ ] `cargo build -p chadreview_app` compiles with updated signatures
+- [ ] Comments are fetched and passed through to diff viewer
+- [ ] No compile errors in updated code
+
+### 10.2 Comment Thread Component 🔴 **CRITICAL**
+
+- [ ] Create `packages/app/ui/src/comment_thread.rs`
+    - [ ] Add `pub mod comment_thread;` to `packages/app/ui/src/lib.rs`
+    - [ ] Import dependencies: `Comment`, `CommentType`, `Containers`, `container`
+
+- [ ] Implement `render_comment_thread(comment: &Comment, depth: usize)`
+    - [ ] Render comment with left margin based on depth (depth \* 20px)
+    - [ ] Add border-left for visual thread hierarchy
+    - [ ] Call `render_comment_item()` for the comment
+    - [ ] Recursively render `comment.replies` with `depth + 1`
+
+- [ ] Implement `render_comment_item(comment: &Comment)`
+    - [ ] Display comment author with avatar (24x24, rounded)
+    - [ ] Display username as clickable link to `comment.author.html_url`
+    - [ ] Display timestamp formatted as `format_timestamp(&comment.created_at)`
+    - [ ] Display comment body with proper text styling
+    - [ ] Render action buttons: Reply, Edit, Delete
+    - [ ] Render hidden reply form with id `reply-form-{comment.id}`
+
+- [ ] Implement `format_timestamp(dt: &chrono::DateTime<chrono::Utc>) -> String`
+    - [ ] Use chrono formatting: `dt.format("%b %d, %Y").to_string()`
+
+**Verification:**
+
+- [ ] Comment metadata displays correctly (author, avatar, timestamp, body)
+- [ ] Nested replies show proper indentation and visual hierarchy
+- [ ] Author avatars are clickable links to GitHub profiles
+
+### 10.3 Comment Forms (Create/Reply/Edit) 🔴 **CRITICAL**
+
+- [ ] Implement `render_create_comment_form(owner, repo, number, file_path, line)`
+    - [ ] Form with `hx-post="/api/pr/comment?owner={}&repo={}&number={}"`
+    - [ ] `hx-swap=(SwapTarget::Id(format!("line-{}-comments", line)))`
+    - [ ] Hidden inputs: `path`, `line`, `comment_type=LineLevelComment`
+    - [ ] Textarea with `name="body"`, placeholder, styling
+    - [ ] Submit button (green background, white text)
+    - [ ] Cancel button with `fx-click=fx { hide(form_id) }`
+    - [ ] Form hidden by default with `display=none`
+
+- [ ] Implement `render_reply_form(parent_comment: &Comment)`
+    - [ ] Form with `hx-post` to comment endpoint
+    - [ ] `hx-swap=(SwapTarget::Id(format!("comment-{}-replies", parent_comment.id)))`
+    - [ ] Hidden input: `in_reply_to=(parent_comment.id)`
+    - [ ] Textarea for reply body
+    - [ ] Submit and Cancel buttons
+
+- [ ] Implement `render_edit_form(comment: &Comment)`
+    - [ ] Form with `hx-put="/api/comment/update?id={}"`
+    - [ ] `hx-swap=(SwapTarget::Id(format!("comment-{}", comment.id)))`
+    - [ ] Textarea pre-populated with `value=(comment.body)`
+    - [ ] Save and Cancel buttons
+
+- [ ] Add form validation
+    - [ ] Use `required` attribute on textarea elements
+    - [ ] Ensure minimum height for textareas (60-80px)
+
+**Verification:**
+
+- [ ] Create comment form displays and hides correctly
+- [ ] Reply form shows when reply button clicked
+- [ ] Edit form populates with existing comment body
+- [ ] Cancel buttons hide forms using `fx-click`
+- [ ] Forms use correct API endpoints with query parameters
+
+### 10.4 Action Buttons (Reply/Edit/Delete) 🔴 **CRITICAL**
+
+- [ ] Implement `render_reply_button(comment: &Comment)`
+    - [ ] Button with `fx-click=fx { toggle_visibility(format!("reply-form-{}", comment.id)) }`
+    - [ ] Transparent background, blue text color `#0969da`
+    - [ ] Text: "Reply"
+
+- [ ] Implement `render_edit_button(comment: &Comment)`
+    - [ ] Button with `fx-click=fx { toggle_visibility(format!("edit-form-{}", comment.id)); hide(format!("comment-{}-body", comment.id)) }`
+    - [ ] Transparent background, blue text color
+    - [ ] Text: "Edit"
+    - [ ] TODO: Add auth check to only show for user's own comments
+
+- [ ] Implement `render_delete_button(comment: &Comment)`
+    - [ ] Form with `hx-delete="/api/comment/delete?id={}"`
+    - [ ] `hx-swap=(SwapTarget::Id(format!("comment-{}", comment.id)))`
+    - [ ] Submit button with red text color `#cf222e`
+    - [ ] Text: "Delete"
+    - [ ] TODO: Add auth check to only show for user's own comments
+
+- [ ] Implement `render_add_comment_button(file_path, line)`
+    - [ ] Button with `fx-click=fx { toggle_visibility(format!("comment-form-{}-{}", file_path, line)) }`
+    - [ ] Transparent background, blue text color
+    - [ ] Text: "+"
+    - [ ] Low opacity (0.6) for subtle appearance
+
+**Verification:**
+
+- [ ] Reply button shows/hides reply form
+- [ ] Edit button toggles edit mode
+- [ ] Delete button submits DELETE request
+- [ ] "+ Add comment" button shows create form
+
+### 10.5 Integrate Comments into Diff Viewer 🔴 **CRITICAL**
+
+- [ ] Update `packages/app/ui/src/diff_viewer.rs`
+    - [ ] Add `use crate::comment_thread;` import
+    - [ ] Update `render()` to accept owner, repo, number parameters (needed for form URLs)
+    - [ ] Update `render_file()` to filter comments by filename
+    - [ ] Render file-level comments at top of file diff (before hunks)
+    - [ ] After each line rendering, call `render_line_comments()`
+
+- [ ] Implement `render_line_comments()` helper
+    - [ ] Filter comments for specific file path and line number
+    - [ ] Return container with id `line-{}-comments`
+    - [ ] Render existing comment threads for the line
+    - [ ] Render `render_add_comment_button()`
+    - [ ] Render `render_create_comment_form()` (hidden by default)
+
+- [ ] Implement `render_file_level_comments()` helper
+    - [ ] Filter comments where `CommentType::FileLevelComment { path }` matches filename
+    - [ ] Return list of file-level comments for rendering at top of file
+
+- [ ] Thread owner/repo/number through render chain
+    - [ ] Update `render()` signature
+    - [ ] Pass to `render_file()`
+    - [ ] Pass to `render_line_comments()`
+    - [ ] Use in form `hx-post` URLs
+
+**Verification:**
+
+- [ ] Line-level comments appear directly below code lines
+- [ ] File-level comments appear at top of file diff (before code)
+- [ ] "+ Add comment" button appears for each line
+- [ ] Comment forms use correct API endpoints with owner/repo/number
+- [ ] Comments filtered correctly by file path and line number
+
+### 10.6 Route Response Handling 🔴 **CRITICAL**
+
+- [ ] Update `create_comment_route()` in `packages/app/src/routes.rs`
+    - [ ] After creating comment, return rendered comment HTML
+    - [ ] Use `render_comment_response(&comment)` helper
+    - [ ] Return `Container` that `hx-swap` will insert
+
+- [ ] Update `update_comment_route()`
+    - [ ] After updating comment, return rendered updated comment
+    - [ ] Use `render_comment_response(&comment)` helper
+
+- [ ] Update `delete_comment_route()`
+    - [ ] After deleting, return empty container
+    - [ ] `hx-swap` will remove the element from DOM
+
+- [ ] Implement `render_comment_response(comment: &Comment) -> Container`
+    - [ ] Call `chadreview_app_ui::comment_thread::render_comment_thread(comment, 0)`
+    - [ ] Wrap in container and return
+
+**Verification:**
+
+- [ ] Creating comment returns HTML that gets inserted by `hx-swap`
+- [ ] Updating comment replaces existing comment with new content
+- [ ] Deleting comment removes element from DOM
+- [ ] All routes return proper `Container` types
+
+### 10.7 Verification Checklist
+
+**Comment Display:**
+
+- [ ] Line-level comments appear directly under code lines
+- [ ] File-level comments appear at top of file diff
+- [ ] Nested replies display with proper indentation (20px per level)
+- [ ] Comment metadata renders correctly (author, avatar, timestamp, body)
+- [ ] Author avatars are clickable links to GitHub profiles
+- [ ] Timestamps formatted properly
+
+**Comment Creation:**
+
+- [ ] "+ Add comment" button shows create form
+- [ ] Create form submits to `/api/pr/comment` with correct query parameters
+- [ ] Form includes hidden inputs for path, line, comment_type
+- [ ] New comment appears inline after submission
+- [ ] Cancel button hides form using `fx-click`
+- [ ] Textarea has proper styling and placeholder
+
+**Comment Replies:**
+
+- [ ] "Reply" button shows reply form using `fx-click`
+- [ ] Reply form submits with `in_reply_to` parameter
+- [ ] New reply appears nested under parent comment
+- [ ] Cancel button hides reply form
+- [ ] Reply indentation increases correctly (recursive depth)
+
+**Comment Editing:**
+
+- [ ] "Edit" button shows edit form using `fx-click`
+- [ ] Edit form pre-populates with existing comment body
+- [ ] Update submits to `/api/comment/update?id={}`
+- [ ] Updated comment replaces old content via `hx-swap`
+- [ ] Cancel button hides edit form
+
+**Comment Deletion:**
+
+- [ ] "Delete" button submits DELETE request via form
+- [ ] DELETE request goes to `/api/comment/delete?id={}`
+- [ ] Comment disappears from UI after deletion
+- [ ] `hx-swap` removes the element from DOM
+
+**Real-time Updates:**
+
+- [ ] Other viewers see new comments appear automatically (SSE)
+- [ ] Updates and deletes propagate to all clients
+- [ ] No manual refresh needed
+
+**Code Quality:**
+
 - [ ] Run `cargo fmt` (format code)
 - [ ] Run `cargo clippy --all-targets -p chadreview_app_ui -- -D warnings` (zero warnings)
-- [ ] Manual testing: Create/reply/edit/delete comments on real PR
+- [ ] Run `cargo clippy --all-targets -p chadreview_app -- -D warnings` (zero warnings)
+- [ ] Run `cargo build -p chadreview_app` (compiles)
+- [ ] Run `cargo test --workspace` (all tests pass)
+
+**Manual Testing:**
+
+- [ ] View real PR with existing comments
+- [ ] Create line-level comment on specific line
+- [ ] Reply to existing comment
+- [ ] Edit own comment
+- [ ] Delete own comment
+- [ ] Test with multiple files and hunks
+- [ ] Test nested reply threads (3+ levels deep)
+- [ ] Test with PR that has no comments
+- [ ] Test with PR that has many comments (50+)
 
 ## Phase 11: UI Components - General Comments 🔴 **NOT STARTED**
 
