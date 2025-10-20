@@ -12,6 +12,12 @@ version     = { workspace = true }
 
 [dependencies]
 chadreview_pr_models = { workspace = true }
+syntect = { workspace = true, features = [
+    "default-syntaxes",
+    "default-themes",
+    "parsing",
+    "regex-onig",
+] }
 
 [features]
 default          = []

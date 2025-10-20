@@ -1,6 +1,10 @@
+use crate::diff_parser::parse_unified_diff;
 use anyhow::Result;
 use chadreview_git_provider::GitProvider;
-use chadreview_pr_models::{Comment, CreateComment, DiffFile, Label, PrState, PullRequest, User};
+use chadreview_pr_models::{
+    Comment, CreateComment, DiffFile, FileStatus, Label, PrState, PullRequest, User,
+};
+use chadreview_syntax::SyntaxHighlighter;
 
 pub struct GitHubProvider {
     http_client: reqwest::Client,
@@ -67,8 +71,69 @@ impl GitProvider for GitHubProvider {
         })
     }
 
-    async fn get_diff(&self, _owner: &str, _repo: &str, _number: u64) -> Result<Vec<DiffFile>> {
-        todo!("Implement in Phase 4")
+    async fn get_diff(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<DiffFile>> {
+        let files_url = format!(
+            "{}/repos/{}/{}/pulls/{}/files",
+            self.base_url, owner, repo, number
+        );
+        let files_response = self
+            .http_client
+            .get(&files_url)
+            .bearer_auth(&self.auth_token)
+            .header("Accept", "application/vnd.github.v3+json")
+            .send()
+            .await?;
+
+        if !files_response.status().is_success() {
+            anyhow::bail!("GitHub API error: {}", files_response.status());
+        }
+
+        let files_data: Vec<serde_json::Value> = files_response.json().await?;
+
+        let diff_url = format!(
+            "{}/repos/{}/{}/pulls/{}",
+            self.base_url, owner, repo, number
+        );
+        let diff_response = self
+            .http_client
+            .get(&diff_url)
+            .bearer_auth(&self.auth_token)
+            .header("Accept", "application/vnd.github.v3.diff")
+            .send()
+            .await?;
+
+        if !diff_response.status().is_success() {
+            anyhow::bail!("GitHub API error: {}", diff_response.status());
+        }
+
+        let full_diff = diff_response.text().await?;
+
+        let highlighter = SyntaxHighlighter::new();
+        let mut result = Vec::new();
+
+        for file_data in &files_data {
+            let filename = file_data["filename"].as_str().unwrap();
+            let status = parse_file_status(file_data["status"].as_str().unwrap());
+            let additions = usize::try_from(file_data["additions"].as_u64().unwrap())?;
+            let deletions = usize::try_from(file_data["deletions"].as_u64().unwrap())?;
+
+            let file_diff = extract_file_diff(&full_diff, filename);
+
+            if let Some(diff_text) = file_diff {
+                let parsed = parse_unified_diff(
+                    filename,
+                    status,
+                    additions,
+                    deletions,
+                    &diff_text,
+                    &highlighter,
+                )
+                .map_err(|e| anyhow::anyhow!(e))?;
+                result.push(parsed);
+            }
+        }
+
+        Ok(result)
     }
 
     async fn get_comments(&self, _owner: &str, _repo: &str, _number: u64) -> Result<Vec<Comment>> {
@@ -144,6 +209,26 @@ fn parse_datetime(s: &str) -> chrono::DateTime<chrono::Utc> {
     chrono::DateTime::parse_from_rfc3339(s)
         .unwrap()
         .with_timezone(&chrono::Utc)
+}
+
+fn parse_file_status(status: &str) -> FileStatus {
+    match status {
+        "added" => FileStatus::Added,
+        "removed" => FileStatus::Deleted,
+        "renamed" => FileStatus::Renamed,
+        _ => FileStatus::Modified,
+    }
+}
+
+fn extract_file_diff(full_diff: &str, filename: &str) -> Option<String> {
+    let file_marker = format!("diff --git a/{filename} b/{filename}");
+    let start = full_diff.find(&file_marker)?;
+
+    let rest = &full_diff[start..];
+    let next_file = rest[1..].find("diff --git ");
+
+    let end = next_file.map_or(rest.len(), |pos| pos + 1);
+    Some(rest[..end].to_string())
 }
 
 #[cfg(test)]
