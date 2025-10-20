@@ -136,8 +136,57 @@ impl GitProvider for GitHubProvider {
         Ok(result)
     }
 
-    async fn get_comments(&self, _owner: &str, _repo: &str, _number: u64) -> Result<Vec<Comment>> {
-        todo!("Implement in Phase 5")
+    async fn get_comments(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<Comment>> {
+        let review_comments_url = format!(
+            "{}/repos/{}/{}/pulls/{}/comments",
+            self.base_url, owner, repo, number
+        );
+        let review_response = self
+            .http_client
+            .get(&review_comments_url)
+            .bearer_auth(&self.auth_token)
+            .header("Accept", "application/vnd.github.v3+json")
+            .send()
+            .await?;
+
+        if !review_response.status().is_success() {
+            anyhow::bail!("GitHub API error: {}", review_response.status());
+        }
+
+        let review_comments: Vec<serde_json::Value> = review_response.json().await?;
+
+        let issue_comments_url = format!(
+            "{}/repos/{}/{}/issues/{}/comments",
+            self.base_url, owner, repo, number
+        );
+        let issue_response = self
+            .http_client
+            .get(&issue_comments_url)
+            .bearer_auth(&self.auth_token)
+            .header("Accept", "application/vnd.github.v3+json")
+            .send()
+            .await?;
+
+        if !issue_response.status().is_success() {
+            anyhow::bail!("GitHub API error: {}", issue_response.status());
+        }
+
+        let issue_comments: Vec<serde_json::Value> = issue_response.json().await?;
+
+        let mut all_comments_with_reply_info = Vec::new();
+
+        for comment_data in &review_comments {
+            let comment = parse_review_comment(comment_data);
+            let in_reply_to = comment_data["in_reply_to_id"].as_u64();
+            all_comments_with_reply_info.push((comment, in_reply_to));
+        }
+
+        for comment_data in &issue_comments {
+            let comment = parse_issue_comment(comment_data);
+            all_comments_with_reply_info.push((comment, None));
+        }
+
+        Ok(thread_comments(all_comments_with_reply_info))
     }
 
     async fn create_comment(
@@ -231,6 +280,92 @@ fn extract_file_diff(full_diff: &str, filename: &str) -> Option<String> {
     Some(rest[..end].to_string())
 }
 
+fn parse_review_comment(value: &serde_json::Value) -> Comment {
+    use chadreview_pr_models::CommentType;
+
+    let path = value["path"].as_str().unwrap_or("").to_string();
+    let line = value["line"].as_u64().and_then(|l| usize::try_from(l).ok());
+
+    let comment_type = if let Some(line_num) = line {
+        CommentType::LineLevelComment {
+            path,
+            line: line_num,
+        }
+    } else {
+        CommentType::FileLevelComment { path }
+    };
+
+    Comment {
+        id: value["id"].as_u64().unwrap(),
+        author: parse_user(&value["user"]),
+        body: value["body"].as_str().unwrap().to_string(),
+        created_at: parse_datetime(value["created_at"].as_str().unwrap()),
+        updated_at: parse_datetime(value["updated_at"].as_str().unwrap()),
+        comment_type,
+        replies: Vec::new(),
+    }
+}
+
+fn parse_issue_comment(value: &serde_json::Value) -> Comment {
+    use chadreview_pr_models::CommentType;
+
+    Comment {
+        id: value["id"].as_u64().unwrap(),
+        author: parse_user(&value["user"]),
+        body: value["body"].as_str().unwrap().to_string(),
+        created_at: parse_datetime(value["created_at"].as_str().unwrap()),
+        updated_at: parse_datetime(value["updated_at"].as_str().unwrap()),
+        comment_type: CommentType::General,
+        replies: Vec::new(),
+    }
+}
+
+fn build_tree(
+    comment_id: u64,
+    comment_map: &mut std::collections::HashMap<u64, Comment>,
+    reply_map: &std::collections::HashMap<u64, Vec<u64>>,
+) -> Option<Comment> {
+    let mut comment = comment_map.remove(&comment_id)?;
+
+    if let Some(reply_ids) = reply_map.get(&comment_id) {
+        for &reply_id in reply_ids {
+            if let Some(reply) = build_tree(reply_id, comment_map, reply_map) {
+                comment.replies.push(reply);
+            }
+        }
+    }
+
+    Some(comment)
+}
+
+fn thread_comments(comments_with_replies: Vec<(Comment, Option<u64>)>) -> Vec<Comment> {
+    use std::collections::HashMap;
+
+    let mut comment_map: HashMap<u64, Comment> = HashMap::new();
+    let mut reply_map: HashMap<u64, Vec<u64>> = HashMap::new();
+    let mut root_ids = Vec::new();
+
+    for (comment, in_reply_to) in comments_with_replies {
+        let comment_id = comment.id;
+        comment_map.insert(comment_id, comment);
+
+        if let Some(parent_id) = in_reply_to {
+            reply_map.entry(parent_id).or_default().push(comment_id);
+        } else {
+            root_ids.push(comment_id);
+        }
+    }
+
+    let mut result = Vec::new();
+    for root_id in root_ids {
+        if let Some(comment) = build_tree(root_id, &mut comment_map, &reply_map) {
+            result.push(comment);
+        }
+    }
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -317,5 +452,233 @@ mod tests {
         let pr = client.get_pr("owner", "repo", 456).await.unwrap();
 
         assert_eq!(pr.state, PrState::Merged);
+    }
+
+    #[tokio::test]
+    async fn test_get_comments_general() {
+        let mock_server = MockServer::start().await;
+
+        let review_comments = serde_json::json!([]);
+        let issue_comments = serde_json::json!([
+            {
+                "id": 1001,
+                "body": "This looks great!",
+                "user": {
+                    "id": 12345,
+                    "login": "reviewer1",
+                    "avatar_url": "https://example.com/avatar1.png",
+                    "html_url": "https://github.com/reviewer1"
+                },
+                "created_at": "2025-01-01T10:00:00Z",
+                "updated_at": "2025-01-01T10:00:00Z"
+            }
+        ]);
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/123/comments"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&review_comments))
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/issues/123/comments"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&issue_comments))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+
+        let comments = client.get_comments("owner", "repo", 123).await.unwrap();
+
+        assert_eq!(comments.len(), 1);
+        assert_eq!(comments[0].id, 1001);
+        assert_eq!(comments[0].body, "This looks great!");
+        assert_eq!(comments[0].author.username, "reviewer1");
+        assert!(matches!(
+            comments[0].comment_type,
+            chadreview_pr_models::CommentType::General
+        ));
+        assert_eq!(comments[0].replies.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_comments_line_level() {
+        let mock_server = MockServer::start().await;
+
+        let review_comments = serde_json::json!([
+            {
+                "id": 2001,
+                "body": "This needs fixing",
+                "path": "src/main.rs",
+                "line": 42,
+                "user": {
+                    "id": 12345,
+                    "login": "reviewer1",
+                    "avatar_url": "https://example.com/avatar1.png",
+                    "html_url": "https://github.com/reviewer1"
+                },
+                "created_at": "2025-01-01T10:00:00Z",
+                "updated_at": "2025-01-01T10:00:00Z",
+                "in_reply_to_id": null
+            }
+        ]);
+        let issue_comments = serde_json::json!([]);
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/123/comments"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&review_comments))
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/issues/123/comments"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&issue_comments))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+
+        let comments = client.get_comments("owner", "repo", 123).await.unwrap();
+
+        assert_eq!(comments.len(), 1);
+        assert_eq!(comments[0].id, 2001);
+        assert_eq!(comments[0].body, "This needs fixing");
+        match &comments[0].comment_type {
+            chadreview_pr_models::CommentType::LineLevelComment { path, line } => {
+                assert_eq!(path, "src/main.rs");
+                assert_eq!(*line, 42);
+            }
+            _ => panic!("Expected LineLevelComment"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_comments_threaded() {
+        let mock_server = MockServer::start().await;
+
+        let review_comments = serde_json::json!([
+            {
+                "id": 3001,
+                "body": "Parent comment",
+                "path": "src/lib.rs",
+                "line": 10,
+                "user": {
+                    "id": 12345,
+                    "login": "reviewer1",
+                    "avatar_url": "https://example.com/avatar1.png",
+                    "html_url": "https://github.com/reviewer1"
+                },
+                "created_at": "2025-01-01T10:00:00Z",
+                "updated_at": "2025-01-01T10:00:00Z",
+                "in_reply_to_id": null
+            },
+            {
+                "id": 3002,
+                "body": "Reply to parent",
+                "path": "src/lib.rs",
+                "line": 10,
+                "user": {
+                    "id": 67890,
+                    "login": "author",
+                    "avatar_url": "https://example.com/avatar2.png",
+                    "html_url": "https://github.com/author"
+                },
+                "created_at": "2025-01-01T11:00:00Z",
+                "updated_at": "2025-01-01T11:00:00Z",
+                "in_reply_to_id": 3001
+            }
+        ]);
+        let issue_comments = serde_json::json!([]);
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/123/comments"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&review_comments))
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/issues/123/comments"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&issue_comments))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+
+        let comments = client.get_comments("owner", "repo", 123).await.unwrap();
+
+        assert_eq!(comments.len(), 1);
+        assert_eq!(comments[0].id, 3001);
+        assert_eq!(comments[0].body, "Parent comment");
+        assert_eq!(comments[0].replies.len(), 1);
+        assert_eq!(comments[0].replies[0].id, 3002);
+        assert_eq!(comments[0].replies[0].body, "Reply to parent");
+        assert_eq!(comments[0].replies[0].author.username, "author");
+    }
+
+    #[tokio::test]
+    async fn test_get_comments_mixed_types() {
+        let mock_server = MockServer::start().await;
+
+        let review_comments = serde_json::json!([
+            {
+                "id": 4001,
+                "body": "Line comment",
+                "path": "src/main.rs",
+                "line": 5,
+                "user": {
+                    "id": 12345,
+                    "login": "reviewer1",
+                    "avatar_url": "https://example.com/avatar1.png",
+                    "html_url": "https://github.com/reviewer1"
+                },
+                "created_at": "2025-01-01T10:00:00Z",
+                "updated_at": "2025-01-01T10:00:00Z",
+                "in_reply_to_id": null
+            }
+        ]);
+        let issue_comments = serde_json::json!([
+            {
+                "id": 4002,
+                "body": "General PR comment",
+                "user": {
+                    "id": 67890,
+                    "login": "author",
+                    "avatar_url": "https://example.com/avatar2.png",
+                    "html_url": "https://github.com/author"
+                },
+                "created_at": "2025-01-01T11:00:00Z",
+                "updated_at": "2025-01-01T11:00:00Z"
+            }
+        ]);
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/123/comments"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&review_comments))
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/issues/123/comments"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&issue_comments))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+
+        let comments = client.get_comments("owner", "repo", 123).await.unwrap();
+
+        assert_eq!(comments.len(), 2);
+
+        let line_comment = comments.iter().find(|c| c.id == 4001).unwrap();
+        assert!(matches!(
+            line_comment.comment_type,
+            chadreview_pr_models::CommentType::LineLevelComment { .. }
+        ));
+
+        let general_comment = comments.iter().find(|c| c.id == 4002).unwrap();
+        assert!(matches!(
+            general_comment.comment_type,
+            chadreview_pr_models::CommentType::General
+        ));
     }
 }
