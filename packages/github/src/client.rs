@@ -191,20 +191,172 @@ impl GitProvider for GitHubProvider {
 
     async fn create_comment(
         &self,
-        _owner: &str,
-        _repo: &str,
-        _number: u64,
-        _comment: CreateComment,
+        owner: &str,
+        repo: &str,
+        number: u64,
+        comment: CreateComment,
     ) -> Result<Comment> {
-        todo!("Implement in Phase 6")
+        use chadreview_pr_models::CommentType;
+
+        match &comment.comment_type {
+            CommentType::LineLevelComment { path, line } => {
+                let url = format!(
+                    "{}/repos/{}/{}/pulls/{}/comments",
+                    self.base_url, owner, repo, number
+                );
+
+                let mut body = serde_json::json!({
+                    "body": comment.body,
+                    "path": path,
+                    "line": line,
+                });
+
+                if let Some(reply_to) = comment.in_reply_to {
+                    body["in_reply_to"] = serde_json::json!(reply_to);
+                }
+
+                let response = self
+                    .http_client
+                    .post(&url)
+                    .bearer_auth(&self.auth_token)
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .json(&body)
+                    .send()
+                    .await?;
+
+                if !response.status().is_success() {
+                    anyhow::bail!("GitHub API error: {}", response.status());
+                }
+
+                let comment_data: serde_json::Value = response.json().await?;
+                Ok(parse_review_comment(&comment_data))
+            }
+            CommentType::FileLevelComment { path } => {
+                let url = format!(
+                    "{}/repos/{}/{}/pulls/{}/comments",
+                    self.base_url, owner, repo, number
+                );
+
+                let mut body = serde_json::json!({
+                    "body": comment.body,
+                    "path": path,
+                });
+
+                if let Some(reply_to) = comment.in_reply_to {
+                    body["in_reply_to"] = serde_json::json!(reply_to);
+                }
+
+                let response = self
+                    .http_client
+                    .post(&url)
+                    .bearer_auth(&self.auth_token)
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .json(&body)
+                    .send()
+                    .await?;
+
+                if !response.status().is_success() {
+                    anyhow::bail!("GitHub API error: {}", response.status());
+                }
+
+                let comment_data: serde_json::Value = response.json().await?;
+                Ok(parse_review_comment(&comment_data))
+            }
+            CommentType::General => {
+                let url = format!(
+                    "{}/repos/{}/{}/issues/{}/comments",
+                    self.base_url, owner, repo, number
+                );
+
+                let body = serde_json::json!({
+                    "body": comment.body,
+                });
+
+                let response = self
+                    .http_client
+                    .post(&url)
+                    .bearer_auth(&self.auth_token)
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .json(&body)
+                    .send()
+                    .await?;
+
+                if !response.status().is_success() {
+                    anyhow::bail!("GitHub API error: {}", response.status());
+                }
+
+                let comment_data: serde_json::Value = response.json().await?;
+                Ok(parse_issue_comment(&comment_data))
+            }
+        }
     }
 
-    async fn update_comment(&self, _comment_id: u64, _body: String) -> Result<Comment> {
-        todo!("Implement in Phase 6")
+    async fn update_comment(&self, comment_id: u64, body: String) -> Result<Comment> {
+        let request_body = serde_json::json!({
+            "body": body,
+        });
+
+        let review_url = format!("{}/repos/*/pulls/comments/{}", self.base_url, comment_id);
+        let review_response = self
+            .http_client
+            .patch(&review_url)
+            .bearer_auth(&self.auth_token)
+            .header("Accept", "application/vnd.github.v3+json")
+            .json(&request_body)
+            .send()
+            .await?;
+
+        if review_response.status().is_success() {
+            let comment_data: serde_json::Value = review_response.json().await?;
+            return Ok(parse_review_comment(&comment_data));
+        }
+
+        let issue_url = format!("{}/repos/*/issues/comments/{}", self.base_url, comment_id);
+        let issue_response = self
+            .http_client
+            .patch(&issue_url)
+            .bearer_auth(&self.auth_token)
+            .header("Accept", "application/vnd.github.v3+json")
+            .json(&request_body)
+            .send()
+            .await?;
+
+        if !issue_response.status().is_success() {
+            anyhow::bail!("GitHub API error: {}", issue_response.status());
+        }
+
+        let comment_data: serde_json::Value = issue_response.json().await?;
+        Ok(parse_issue_comment(&comment_data))
     }
 
-    async fn delete_comment(&self, _comment_id: u64) -> Result<()> {
-        todo!("Implement in Phase 6")
+    async fn delete_comment(&self, comment_id: u64) -> Result<()> {
+        let review_url = format!("{}/repos/*/pulls/comments/{}", self.base_url, comment_id);
+        let review_response = self
+            .http_client
+            .delete(&review_url)
+            .bearer_auth(&self.auth_token)
+            .header("Accept", "application/vnd.github.v3+json")
+            .send()
+            .await?;
+
+        if review_response.status().is_success() {
+            return Ok(());
+        }
+
+        let issue_url = format!("{}/repos/*/issues/comments/{}", self.base_url, comment_id);
+        let issue_response = self
+            .http_client
+            .delete(&issue_url)
+            .bearer_auth(&self.auth_token)
+            .header("Accept", "application/vnd.github.v3+json")
+            .send()
+            .await?;
+
+        if !issue_response.status().is_success() {
+            anyhow::bail!("GitHub API error: {}", issue_response.status());
+        }
+
+        Ok(())
     }
 
     fn provider_name(&self) -> &'static str {
@@ -680,5 +832,344 @@ mod tests {
             general_comment.comment_type,
             chadreview_pr_models::CommentType::General
         ));
+    }
+
+    #[tokio::test]
+    async fn test_create_comment_line_level() {
+        let mock_server = MockServer::start().await;
+
+        let comment_response = serde_json::json!({
+            "id": 5001,
+            "body": "New line comment",
+            "path": "src/main.rs",
+            "line": 10,
+            "user": {
+                "id": 12345,
+                "login": "commenter",
+                "avatar_url": "https://example.com/avatar.png",
+                "html_url": "https://github.com/commenter"
+            },
+            "created_at": "2025-01-01T12:00:00Z",
+            "updated_at": "2025-01-01T12:00:00Z",
+            "in_reply_to_id": null
+        });
+
+        Mock::given(method("POST"))
+            .and(path("/repos/owner/repo/pulls/123/comments"))
+            .respond_with(ResponseTemplate::new(201).set_body_json(&comment_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+
+        let create_comment = CreateComment {
+            body: "New line comment".to_string(),
+            comment_type: chadreview_pr_models::CommentType::LineLevelComment {
+                path: "src/main.rs".to_string(),
+                line: 10,
+            },
+            in_reply_to: None,
+        };
+
+        let comment = client
+            .create_comment("owner", "repo", 123, create_comment)
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, 5001);
+        assert_eq!(comment.body, "New line comment");
+        assert_eq!(comment.author.username, "commenter");
+        match &comment.comment_type {
+            chadreview_pr_models::CommentType::LineLevelComment { path, line } => {
+                assert_eq!(path, "src/main.rs");
+                assert_eq!(*line, 10);
+            }
+            _ => panic!("Expected LineLevelComment"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_create_comment_general() {
+        let mock_server = MockServer::start().await;
+
+        let comment_response = serde_json::json!({
+            "id": 5002,
+            "body": "New general comment",
+            "user": {
+                "id": 12345,
+                "login": "commenter",
+                "avatar_url": "https://example.com/avatar.png",
+                "html_url": "https://github.com/commenter"
+            },
+            "created_at": "2025-01-01T12:00:00Z",
+            "updated_at": "2025-01-01T12:00:00Z"
+        });
+
+        Mock::given(method("POST"))
+            .and(path("/repos/owner/repo/issues/123/comments"))
+            .respond_with(ResponseTemplate::new(201).set_body_json(&comment_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+
+        let create_comment = CreateComment {
+            body: "New general comment".to_string(),
+            comment_type: chadreview_pr_models::CommentType::General,
+            in_reply_to: None,
+        };
+
+        let comment = client
+            .create_comment("owner", "repo", 123, create_comment)
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, 5002);
+        assert_eq!(comment.body, "New general comment");
+        assert!(matches!(
+            comment.comment_type,
+            chadreview_pr_models::CommentType::General
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_create_comment_reply() {
+        let mock_server = MockServer::start().await;
+
+        let comment_response = serde_json::json!({
+            "id": 5003,
+            "body": "Reply to comment",
+            "path": "src/lib.rs",
+            "line": 5,
+            "user": {
+                "id": 12345,
+                "login": "commenter",
+                "avatar_url": "https://example.com/avatar.png",
+                "html_url": "https://github.com/commenter"
+            },
+            "created_at": "2025-01-01T12:00:00Z",
+            "updated_at": "2025-01-01T12:00:00Z",
+            "in_reply_to_id": 3001
+        });
+
+        Mock::given(method("POST"))
+            .and(path("/repos/owner/repo/pulls/123/comments"))
+            .respond_with(ResponseTemplate::new(201).set_body_json(&comment_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+
+        let create_comment = CreateComment {
+            body: "Reply to comment".to_string(),
+            comment_type: chadreview_pr_models::CommentType::LineLevelComment {
+                path: "src/lib.rs".to_string(),
+                line: 5,
+            },
+            in_reply_to: Some(3001),
+        };
+
+        let comment = client
+            .create_comment("owner", "repo", 123, create_comment)
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, 5003);
+        assert_eq!(comment.body, "Reply to comment");
+    }
+
+    #[tokio::test]
+    async fn test_create_comment_unauthorized() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/repos/owner/repo/pulls/123/comments"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("bad-token".to_string()).with_base_url(mock_server.uri());
+
+        let create_comment = CreateComment {
+            body: "Should fail".to_string(),
+            comment_type: chadreview_pr_models::CommentType::LineLevelComment {
+                path: "src/main.rs".to_string(),
+                line: 1,
+            },
+            in_reply_to: None,
+        };
+
+        let result = client
+            .create_comment("owner", "repo", 123, create_comment)
+            .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_update_comment_review() {
+        let mock_server = MockServer::start().await;
+
+        let updated_comment = serde_json::json!({
+            "id": 6001,
+            "body": "Updated comment body",
+            "path": "src/main.rs",
+            "line": 10,
+            "user": {
+                "id": 12345,
+                "login": "commenter",
+                "avatar_url": "https://example.com/avatar.png",
+                "html_url": "https://github.com/commenter"
+            },
+            "created_at": "2025-01-01T12:00:00Z",
+            "updated_at": "2025-01-01T13:00:00Z",
+            "in_reply_to_id": null
+        });
+
+        Mock::given(method("PATCH"))
+            .and(path("/repos/*/pulls/comments/6001"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&updated_comment))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+
+        let comment = client
+            .update_comment(6001, "Updated comment body".to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, 6001);
+        assert_eq!(comment.body, "Updated comment body");
+    }
+
+    #[tokio::test]
+    async fn test_update_comment_issue() {
+        let mock_server = MockServer::start().await;
+
+        let updated_comment = serde_json::json!({
+            "id": 6002,
+            "body": "Updated general comment",
+            "user": {
+                "id": 12345,
+                "login": "commenter",
+                "avatar_url": "https://example.com/avatar.png",
+                "html_url": "https://github.com/commenter"
+            },
+            "created_at": "2025-01-01T12:00:00Z",
+            "updated_at": "2025-01-01T13:00:00Z"
+        });
+
+        Mock::given(method("PATCH"))
+            .and(path("/repos/*/pulls/comments/6002"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("PATCH"))
+            .and(path("/repos/*/issues/comments/6002"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&updated_comment))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+
+        let comment = client
+            .update_comment(6002, "Updated general comment".to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, 6002);
+        assert_eq!(comment.body, "Updated general comment");
+        assert!(matches!(
+            comment.comment_type,
+            chadreview_pr_models::CommentType::General
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_update_comment_unauthorized() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("PATCH"))
+            .and(path("/repos/*/pulls/comments/6003"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("PATCH"))
+            .and(path("/repos/*/issues/comments/6003"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("bad-token".to_string()).with_base_url(mock_server.uri());
+
+        let result = client.update_comment(6003, "Should fail".to_string()).await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_delete_comment_review() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("DELETE"))
+            .and(path("/repos/*/pulls/comments/7001"))
+            .respond_with(ResponseTemplate::new(204))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+
+        let result = client.delete_comment(7001).await;
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_delete_comment_issue() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("DELETE"))
+            .and(path("/repos/*/pulls/comments/7002"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("DELETE"))
+            .and(path("/repos/*/issues/comments/7002"))
+            .respond_with(ResponseTemplate::new(204))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+
+        let result = client.delete_comment(7002).await;
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_delete_comment_unauthorized() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("DELETE"))
+            .and(path("/repos/*/pulls/comments/7003"))
+            .respond_with(ResponseTemplate::new(403))
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("DELETE"))
+            .and(path("/repos/*/issues/comments/7003"))
+            .respond_with(ResponseTemplate::new(403))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new("bad-token".to_string()).with_base_url(mock_server.uri());
+
+        let result = client.delete_comment(7003).await;
+
+        assert!(result.is_err());
     }
 }

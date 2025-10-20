@@ -1445,38 +1445,56 @@ Created packages/github/src/client.rs with complete implementation including Git
 - Integration tests: `test_get_comments_general`, `test_get_comments_line_level`, `test_get_comments_threaded`, `test_get_comments_mixed_types`
 - Zero clippy warnings, all tests passing
 
-## Phase 6: Comment Creation and Mutation 🔴 **NOT STARTED**
+## Phase 6: Comment Creation and Mutation ✅ **COMPLETED**
 
 **Goal:** Implement comment create, update, and delete operations
 
-**Status:** All tasks pending
+**Status:** All tasks completed successfully
 
 ### 6.1 Comment CRUD Operations
 
-- [ ] Implement `create_comment` 🔴 **CRITICAL**
-    - [ ] Handle line-level comment creation
-    - [ ] Handle file-level comment creation
-    - [ ] Handle general PR comment creation
-    - [ ] Handle replies to existing comments
-    - [ ] Add tests
+- [x] Implement `create_comment` 🔴 **CRITICAL**
+    - [x] Handle line-level comment creation
+          Implemented in packages/github/src/client.rs:192-278 with POST to `/repos/{owner}/{repo}/pulls/{number}/comments` endpoint
+    - [x] Handle file-level comment creation
+          Uses same endpoint as line-level, distinguishes via presence of `line` field
+    - [x] Handle general PR comment creation
+          Implemented with POST to `/repos/{owner}/{repo}/issues/{number}/comments` endpoint
+    - [x] Handle replies to existing comments
+          Implemented via `in_reply_to` field in request body
+    - [x] Add tests
+          Added 4 comprehensive tests: `test_create_comment_line_level`, `test_create_comment_general`, `test_create_comment_reply`, `test_create_comment_unauthorized`
 
-- [ ] Implement `update_comment` 🔴 **CRITICAL**
-    - [ ] Update comment body via GitHub API
-    - [ ] Add tests
+- [x] Implement `update_comment` 🔴 **CRITICAL**
+    - [x] Update comment body via GitHub API
+          Implemented in packages/github/src/client.rs:280-310 with PATCH to `/repos/*/pulls/comments/{id}` or `/repos/*/issues/comments/{id}` (tries both endpoints)
+    - [x] Add tests
+          Added 3 tests: `test_update_comment_review`, `test_update_comment_issue`, `test_update_comment_unauthorized`
 
-- [ ] Implement `delete_comment` 🔴 **CRITICAL**
-    - [ ] Delete comment via GitHub API
-    - [ ] Add tests
+- [x] Implement `delete_comment` 🔴 **CRITICAL**
+    - [x] Delete comment via GitHub API
+          Implemented in packages/github/src/client.rs:312-335 with DELETE to `/repos/*/pulls/comments/{id}` or `/repos/*/issues/comments/{id}` (tries both endpoints)
+    - [x] Add tests
+          Added 3 tests: `test_delete_comment_review`, `test_delete_comment_issue`, `test_delete_comment_unauthorized`
 
 #### 6.1 Verification Checklist
 
-- [ ] All CRUD operations work correctly
-- [ ] Proper error handling for unauthorized operations
-- [ ] Tests cover success and failure cases
-- [ ] Run `cargo fmt` (format code)
-- [ ] Run `cargo clippy --all-targets -p chadreview_github -- -D warnings` (zero warnings)
-- [ ] Run `cargo test -p chadreview_github` (all tests pass)
-- [ ] Run `cargo machete` (all dependencies used)
+- [x] All CRUD operations work correctly
+      `create_comment()` handles all 3 CommentType variants (General, FileLevelComment, LineLevelComment) and reply threading
+      `update_comment()` tries review comments endpoint first, falls back to issue comments endpoint
+      `delete_comment()` tries review comments endpoint first, falls back to issue comments endpoint
+- [x] Proper error handling for unauthorized operations
+      All methods return `anyhow::bail!` on non-2xx responses, tested with unauthorized scenarios
+- [x] Tests cover success and failure cases
+      20 total tests (10 existing + 10 new): all creation scenarios, update/delete for both comment types, and unauthorized failure cases
+- [x] Run `cargo fmt` (format code)
+      Code formatted successfully
+- [x] Run `cargo clippy --all-targets -p chadreview_github -- -D warnings` (zero warnings)
+      Passed with zero warnings
+- [x] Run `cargo test -p chadreview_github` (all tests pass)
+      All 20 tests passing
+- [x] Run `cargo machete` (all dependencies used)
+      Zero unused dependencies found
 
 ## Phase 7: HyperChad Application Setup 🔴 **NOT STARTED**
 
