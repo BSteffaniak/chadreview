@@ -1,0 +1,18 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "Syntax highlighting for ChadReview"
+edition     = { workspace = true }
+keywords    = ["highlighting", "syntax"]
+license     = { workspace = true }
+name        = "chadreview_syntax"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_pr_models = { workspace = true }
+
+[features]
+default          = []
+fail-on-warnings = ["chadreview_pr_models/fail-on-warnings"]

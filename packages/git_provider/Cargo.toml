@@ -1,0 +1,22 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "Git provider trait abstraction for ChadReview"
+edition     = { workspace = true }
+keywords    = ["git", "provider", "trait"]
+license     = { workspace = true }
+name        = "chadreview_git_provider"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_git_provider_models = { workspace = true }
+chadreview_pr_models           = { workspace = true }
+
+[features]
+default = []
+fail-on-warnings = [
+    "chadreview_git_provider_models/fail-on-warnings",
+    "chadreview_pr_models/fail-on-warnings",
+]

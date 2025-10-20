@@ -309,16 +309,16 @@ chadreview/
 - Ensures minimal dependency trees
 - Follows MoosicBox conventions
 - Example:
-  ```toml
-  [workspace.dependencies]
-  chadreview_pr_models = { path = "packages/pr/models", version = "0.1.0", default-features = false }
-  tokio = { version = "1", default-features = false }
-  ```
+    ```toml
+    [workspace.dependencies]
+    chadreview_pr_models = { path = "packages/pr/models", version = "0.1.0", default-features = false }
+    tokio = { version = "1", default-features = false }
+    ```
 - Individual crates then enable only needed features:
-  ```toml
-  [dependencies]
-  tokio = { workspace = true, features = ["full"] }
-  ```
+    ```toml
+    [dependencies]
+    tokio = { workspace = true, features = ["full"] }
+    ```
 
 ### Crate Dependency Graph
 

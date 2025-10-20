@@ -1,0 +1,19 @@
+[package]
+authors     = { workspace = true }
+categories  = ["data-structures"]
+description = "Pull request domain models for ChadReview"
+edition     = { workspace = true }
+keywords    = ["models", "pull-request"]
+license     = { workspace = true }
+name        = "chadreview_pr_models"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+
+[features]
+default          = []
+fail-on-warnings = []
+
+[dev-dependencies]

@@ -1,0 +1,26 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "GitHub provider implementation for ChadReview"
+edition     = { workspace = true }
+keywords    = ["api", "github"]
+license     = { workspace = true }
+name        = "chadreview_github"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_git_provider  = { workspace = true }
+chadreview_github_models = { workspace = true }
+chadreview_pr_models     = { workspace = true }
+
+[features]
+default = []
+fail-on-warnings = [
+    "chadreview_git_provider/fail-on-warnings",
+    "chadreview_github_models/fail-on-warnings",
+    "chadreview_pr_models/fail-on-warnings",
+]
+
+[dev-dependencies]

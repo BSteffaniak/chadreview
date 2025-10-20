@@ -1,0 +1,17 @@
+[package]
+authors     = { workspace = true }
+categories  = ["data-structures"]
+description = "Git provider shared models for ChadReview"
+edition     = { workspace = true }
+keywords    = ["git", "models"]
+license     = { workspace = true }
+name        = "chadreview_git_provider_models"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+
+[features]
+default          = []
+fail-on-warnings = []

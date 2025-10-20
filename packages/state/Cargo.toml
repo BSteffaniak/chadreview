@@ -1,0 +1,22 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "Application state management for ChadReview"
+edition     = { workspace = true }
+keywords    = ["management", "state"]
+license     = { workspace = true }
+name        = "chadreview_state"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_git_provider = { workspace = true }
+chadreview_pr_models    = { workspace = true }
+
+[features]
+default = []
+fail-on-warnings = [
+    "chadreview_git_provider/fail-on-warnings",
+    "chadreview_pr_models/fail-on-warnings",
+]

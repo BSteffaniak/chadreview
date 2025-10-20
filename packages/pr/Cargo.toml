@@ -1,0 +1,20 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "Pull request domain logic for ChadReview"
+edition     = { workspace = true }
+keywords    = ["diff", "pull-request"]
+license     = { workspace = true }
+name        = "chadreview_pr"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_pr_models = { workspace = true }
+
+[features]
+default          = []
+fail-on-warnings = ["chadreview_pr_models/fail-on-warnings"]
+
+[dev-dependencies]

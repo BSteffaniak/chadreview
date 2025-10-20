@@ -1,0 +1,23 @@
+[package]
+authors     = { workspace = true }
+categories  = ["gui"]
+description = "HyperChad UI components for ChadReview"
+edition     = { workspace = true }
+keywords    = ["components", "ui"]
+license     = { workspace = true }
+name        = "chadreview_app_ui"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_app_models = { workspace = true }
+chadreview_pr_models  = { workspace = true }
+hyperchad             = { workspace = true, features = ["template"] }
+
+[features]
+default = []
+fail-on-warnings = [
+    "chadreview_app_models/fail-on-warnings",
+    "chadreview_pr_models/fail-on-warnings",
+]

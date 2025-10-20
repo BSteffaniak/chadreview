@@ -1,0 +1,18 @@
+[package]
+authors     = { workspace = true }
+categories  = ["data-structures"]
+description = "Application-specific models for ChadReview"
+edition     = { workspace = true }
+keywords    = ["app", "models"]
+license     = { workspace = true }
+name        = "chadreview_app_models"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_pr_models = { workspace = true }
+
+[features]
+default          = []
+fail-on-warnings = ["chadreview_pr_models/fail-on-warnings"]
