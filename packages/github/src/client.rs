@@ -99,52 +99,15 @@ impl GitProvider for GitHubProvider {
     }
 
     async fn get_diff(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<DiffFile>> {
-        let files_url = format!(
-            "{}/repos/{}/{}/pulls/{}/files",
-            self.base_url, owner, repo, number
-        );
-        log::debug!("GET {files_url}");
-        let mut files_request = self
-            .http_client
-            .get(&files_url)
-            .header("Accept", "application/vnd.github.v3+json");
-
-        if let Some(token) = &self.auth_token {
-            files_request = files_request.bearer_auth(token);
-        }
-
-        let files_response = files_request.send().await?;
-        let status = files_response.status();
-
-        if !status.is_success() {
-            log::error!("GitHub API error: {}", files_response.text().await?);
-            anyhow::bail!("GitHub API error: {status}");
-        }
-
-        let files_data: Vec<serde_json::Value> = files_response.json().await?;
-
-        let diff_url = format!(
-            "{}/repos/{}/{}/pulls/{}",
-            self.base_url, owner, repo, number
-        );
-        let mut diff_request = self
-            .http_client
-            .get(&diff_url)
-            .header("Accept", "application/vnd.github.v3.diff");
-
-        if let Some(token) = &self.auth_token {
-            diff_request = diff_request.bearer_auth(token);
-        }
-
-        let diff_response = diff_request.send().await?;
-        let status = diff_response.status();
-
-        if !status.is_success() {
-            log::error!("GitHub API error: {}", diff_response.text().await?);
-            anyhow::bail!("GitHub API error: {status}");
-        }
-
-        let full_diff = diff_response.text().await?;
+        let files_data = fetch_all_pr_files(
+            &self.http_client,
+            &self.base_url,
+            owner,
+            repo,
+            number,
+            self.auth_token.as_ref(),
+        )
+        .await?;
 
         let highlighter = SyntaxHighlighter::new();
         let mut result = Vec::new();
@@ -155,19 +118,21 @@ impl GitProvider for GitHubProvider {
             let additions = usize::try_from(file_data["additions"].as_u64().unwrap())?;
             let deletions = usize::try_from(file_data["deletions"].as_u64().unwrap())?;
 
-            let file_diff = extract_file_diff(&full_diff, filename);
-
-            if let Some(diff_text) = file_diff {
+            if let Some(patch_str) = file_data["patch"].as_str() {
                 let parsed = parse_unified_diff(
                     filename,
                     status,
                     additions,
                     deletions,
-                    &diff_text,
+                    patch_str,
                     &highlighter,
                 )
                 .map_err(|e| anyhow::anyhow!(e))?;
                 result.push(parsed);
+            } else {
+                log::debug!(
+                    "Skipping {filename} - no patch data (likely binary or no content changes)"
+                );
             }
         }
 
@@ -508,15 +473,115 @@ fn parse_file_status(status: &str) -> FileStatus {
     }
 }
 
-fn extract_file_diff(full_diff: &str, filename: &str) -> Option<String> {
-    let file_marker = format!("diff --git a/{filename} b/{filename}");
-    let start = full_diff.find(&file_marker)?;
+#[derive(Debug, Default)]
+struct LinkHeader {
+    next: Option<String>,
+}
 
-    let rest = &full_diff[start..];
-    let next_file = rest[1..].find("diff --git ");
+fn parse_link_header(header_value: &str) -> LinkHeader {
+    let mut result = LinkHeader::default();
 
-    let end = next_file.map_or(rest.len(), |pos| pos + 1);
-    Some(rest[..end].to_string())
+    for part in header_value.split(',') {
+        let segments: Vec<&str> = part.split(';').collect();
+        if segments.len() != 2 {
+            continue;
+        }
+
+        let url = segments[0]
+            .trim()
+            .trim_start_matches('<')
+            .trim_end_matches('>');
+        let rel = segments[1].trim();
+
+        if let Some(rel_value) = rel.strip_prefix("rel=\"").and_then(|r| r.strip_suffix('"'))
+            && rel_value == "next"
+        {
+            result.next = Some(url.to_string());
+        }
+    }
+
+    result
+}
+
+async fn fetch_all_pr_files(
+    http_client: &reqwest::Client,
+    base_url: &str,
+    owner: &str,
+    repo: &str,
+    number: u64,
+    auth_token: Option<&String>,
+) -> Result<Vec<serde_json::Value>> {
+    const MAX_FILES: usize = 3000;
+    const PER_PAGE: u32 = 100;
+
+    let mut all_files = Vec::new();
+    let mut page = 1;
+
+    log::debug!("Fetching PR files for {owner}/{repo} #{number}");
+
+    loop {
+        let url = format!(
+            "{base_url}/repos/{owner}/{repo}/pulls/{number}/files?per_page={PER_PAGE}&page={page}"
+        );
+
+        log::debug!("GET {url} (page {page})");
+
+        let mut request = http_client
+            .get(&url)
+            .header("Accept", "application/vnd.github.v3+json");
+
+        if let Some(token) = auth_token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let error_text = response.text().await?;
+            log::error!("GitHub API error on page {page}: {error_text}");
+            anyhow::bail!("GitHub API error: {status}");
+        }
+
+        let link_header = response
+            .headers()
+            .get("Link")
+            .and_then(|h| h.to_str().ok())
+            .map(parse_link_header);
+
+        let page_files: Vec<serde_json::Value> = response.json().await?;
+        let files_in_page = page_files.len();
+
+        log::debug!("Fetched {files_in_page} files from page {page}");
+
+        all_files.extend(page_files);
+
+        if all_files.len() >= MAX_FILES {
+            log::warn!(
+                "PR has {} files, reached GitHub's {} file limit",
+                all_files.len(),
+                MAX_FILES
+            );
+            break;
+        }
+
+        if let Some(links) = link_header
+            && links.next.is_some()
+        {
+            page += 1;
+            continue;
+        }
+
+        break;
+    }
+
+    log::info!(
+        "Fetched total of {} files across {} page(s)",
+        all_files.len(),
+        page
+    );
+
+    Ok(all_files)
 }
 
 fn parse_review_comment(value: &serde_json::Value) -> Comment {
@@ -1290,5 +1355,191 @@ mod tests {
         let result = client.delete_comment(7003).await;
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_link_header_with_next() {
+        let header = r#"<https://api.github.com/repos/o/r/pulls/1/files?page=2>; rel="next", <https://api.github.com/repos/o/r/pulls/1/files?page=3>; rel="last""#;
+        let parsed = parse_link_header(header);
+        assert!(parsed.next.is_some());
+        assert_eq!(
+            parsed.next.unwrap(),
+            "https://api.github.com/repos/o/r/pulls/1/files?page=2"
+        );
+    }
+
+    #[test]
+    fn test_parse_link_header_without_next() {
+        let header = r#"<https://api.github.com/repos/o/r/pulls/1/files?page=1>; rel="first""#;
+        let parsed = parse_link_header(header);
+        assert!(parsed.next.is_none());
+    }
+
+    #[test]
+    fn test_parse_link_header_empty() {
+        let parsed = parse_link_header("");
+        assert!(parsed.next.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_pr_files_single_page() {
+        let mock_server = MockServer::start().await;
+
+        let files = serde_json::json!([
+            {
+                "filename": "file1.txt",
+                "status": "modified",
+                "additions": 5,
+                "deletions": 2,
+                "patch": "@@ -1,3 +1,5 @@\n line1\n+line2\n line3"
+            },
+            {
+                "filename": "file2.txt",
+                "status": "added",
+                "additions": 10,
+                "deletions": 0,
+                "patch": "@@ -0,0 +1,10 @@\n+new content"
+            }
+        ]);
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/123/files"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&files))
+            .mount(&mock_server)
+            .await;
+
+        let client = reqwest::Client::new();
+        let result = fetch_all_pr_files(&client, &mock_server.uri(), "owner", "repo", 123, None)
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0]["filename"].as_str().unwrap(), "file1.txt");
+        assert_eq!(result[1]["filename"].as_str().unwrap(), "file2.txt");
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_pr_files_multiple_pages() {
+        let mock_server = MockServer::start().await;
+
+        let page1 = serde_json::json!([
+            {
+                "filename": "file1.txt",
+                "status": "modified",
+                "additions": 5,
+                "deletions": 2,
+                "patch": "@@ -1,3 +1,5 @@\n line1"
+            }
+        ]);
+
+        let page2 = serde_json::json!([
+            {
+                "filename": "file2.txt",
+                "status": "added",
+                "additions": 10,
+                "deletions": 0,
+                "patch": "@@ -0,0 +1,10 @@\n+new"
+            }
+        ]);
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/123/files"))
+            .and(wiremock::matchers::query_param("page", "1"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(&page1)
+                    .append_header(
+                    "Link",
+                    format!(
+                        r#"<{}/repos/owner/repo/pulls/123/files?per_page=100&page=2>; rel="next""#,
+                        mock_server.uri()
+                    )
+                    .as_str(),
+                ),
+            )
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/123/files"))
+            .and(wiremock::matchers::query_param("page", "2"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&page2))
+            .mount(&mock_server)
+            .await;
+
+        let client = reqwest::Client::new();
+        let result = fetch_all_pr_files(&client, &mock_server.uri(), "owner", "repo", 123, None)
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0]["filename"].as_str().unwrap(), "file1.txt");
+        assert_eq!(result[1]["filename"].as_str().unwrap(), "file2.txt");
+    }
+
+    #[tokio::test]
+    async fn test_get_diff_with_patch_field() {
+        let mock_server = MockServer::start().await;
+
+        let files = serde_json::json!([
+            {
+                "filename": "src/main.rs",
+                "status": "modified",
+                "additions": 2,
+                "deletions": 1,
+                "patch": "@@ -1,3 +1,4 @@\n fn main() {\n-    println!(\"old\");\n+    println!(\"new\");\n+    println!(\"added\");\n }"
+            }
+        ]);
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/123/files"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&files))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
+
+        let result = client.get_diff("owner", "repo", 123).await.unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].filename, "src/main.rs");
+    }
+
+    #[tokio::test]
+    async fn test_get_diff_skips_files_without_patch() {
+        let mock_server = MockServer::start().await;
+
+        let files = serde_json::json!([
+            {
+                "filename": "image.png",
+                "status": "added",
+                "additions": 0,
+                "deletions": 0
+            },
+            {
+                "filename": "src/lib.rs",
+                "status": "modified",
+                "additions": 5,
+                "deletions": 2,
+                "patch": "@@ -1,3 +1,6 @@\n code"
+            }
+        ]);
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/123/files"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&files))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
+
+        let result = client.get_diff("owner", "repo", 123).await.unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].filename, "src/lib.rs");
     }
 }
