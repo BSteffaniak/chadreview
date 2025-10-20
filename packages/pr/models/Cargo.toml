@@ -11,6 +11,8 @@ repository  = { workspace = true }
 version     = { workspace = true }
 
 [dependencies]
+chrono = { workspace = true, features = ["serde", "std"] }
+serde  = { workspace = true, features = ["derive", "std"] }
 
 [features]
 default          = []
