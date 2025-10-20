@@ -68,9 +68,11 @@ impl GitProvider for GitHubProvider {
         }
 
         let response = request.send().await?;
+        let status = response.status();
 
-        if !response.status().is_success() {
-            anyhow::bail!("GitHub API error: {}", response.status());
+        if !status.is_success() {
+            log::error!("GitHub API error: {}", response.text().await?);
+            anyhow::bail!("GitHub API error: {status}");
         }
 
         let pr_data: serde_json::Value = response.json().await?;
@@ -112,9 +114,11 @@ impl GitProvider for GitHubProvider {
         }
 
         let files_response = files_request.send().await?;
+        let status = files_response.status();
 
-        if !files_response.status().is_success() {
-            anyhow::bail!("GitHub API error: {}", files_response.status());
+        if !status.is_success() {
+            log::error!("GitHub API error: {}", files_response.text().await?);
+            anyhow::bail!("GitHub API error: {status}");
         }
 
         let files_data: Vec<serde_json::Value> = files_response.json().await?;
@@ -133,9 +137,11 @@ impl GitProvider for GitHubProvider {
         }
 
         let diff_response = diff_request.send().await?;
+        let status = diff_response.status();
 
-        if !diff_response.status().is_success() {
-            anyhow::bail!("GitHub API error: {}", diff_response.status());
+        if !status.is_success() {
+            log::error!("GitHub API error: {}", diff_response.text().await?);
+            anyhow::bail!("GitHub API error: {status}");
         }
 
         let full_diff = diff_response.text().await?;
@@ -184,9 +190,11 @@ impl GitProvider for GitHubProvider {
         }
 
         let review_response = review_request.send().await?;
+        let status = review_response.status();
 
-        if !review_response.status().is_success() {
-            anyhow::bail!("GitHub API error: {}", review_response.status());
+        if !status.is_success() {
+            log::error!("GitHub API error: {}", review_response.text().await?);
+            anyhow::bail!("GitHub API error: {status}");
         }
 
         let review_comments: Vec<serde_json::Value> = review_response.json().await?;
@@ -205,9 +213,11 @@ impl GitProvider for GitHubProvider {
         }
 
         let issue_response = issue_request.send().await?;
+        let status = issue_response.status();
 
-        if !issue_response.status().is_success() {
-            anyhow::bail!("GitHub API error: {}", issue_response.status());
+        if !status.is_success() {
+            log::error!("GitHub API error: {}", issue_response.text().await?);
+            anyhow::bail!("GitHub API error: {status}");
         }
 
         let issue_comments: Vec<serde_json::Value> = issue_response.json().await?;
@@ -266,9 +276,11 @@ impl GitProvider for GitHubProvider {
                 }
 
                 let response = request.send().await?;
+                let status = response.status();
 
-                if !response.status().is_success() {
-                    anyhow::bail!("GitHub API error: {}", response.status());
+                if !status.is_success() {
+                    log::error!("GitHub API error: {}", response.text().await?);
+                    anyhow::bail!("GitHub API error: {status}");
                 }
 
                 let comment_data: serde_json::Value = response.json().await?;
@@ -301,9 +313,11 @@ impl GitProvider for GitHubProvider {
                 }
 
                 let response = request.send().await?;
+                let status = response.status();
 
-                if !response.status().is_success() {
-                    anyhow::bail!("GitHub API error: {}", response.status());
+                if !status.is_success() {
+                    log::error!("GitHub API error: {}", response.text().await?);
+                    anyhow::bail!("GitHub API error: {status}");
                 }
 
                 let comment_data: serde_json::Value = response.json().await?;
@@ -331,9 +345,11 @@ impl GitProvider for GitHubProvider {
                 }
 
                 let response = request.send().await?;
+                let status = response.status();
 
-                if !response.status().is_success() {
-                    anyhow::bail!("GitHub API error: {}", response.status());
+                if !status.is_success() {
+                    log::error!("GitHub API error: {}", response.text().await?);
+                    anyhow::bail!("GitHub API error: {status}");
                 }
 
                 let comment_data: serde_json::Value = response.json().await?;
@@ -379,9 +395,11 @@ impl GitProvider for GitHubProvider {
         }
 
         let issue_response = issue_request.send().await?;
+        let status = issue_response.status();
 
-        if !issue_response.status().is_success() {
-            anyhow::bail!("GitHub API error: {}", issue_response.status());
+        if !status.is_success() {
+            log::error!("GitHub API error: {}", issue_response.text().await?);
+            anyhow::bail!("GitHub API error: {status}");
         }
 
         let comment_data: serde_json::Value = issue_response.json().await?;
@@ -418,9 +436,11 @@ impl GitProvider for GitHubProvider {
         }
 
         let issue_response = issue_request.send().await?;
+        let status = issue_response.status();
 
-        if !issue_response.status().is_success() {
-            anyhow::bail!("GitHub API error: {}", issue_response.status());
+        if !status.is_success() {
+            log::error!("GitHub API error: {}", issue_response.text().await?);
+            anyhow::bail!("GitHub API error: {status}");
         }
 
         Ok(())
