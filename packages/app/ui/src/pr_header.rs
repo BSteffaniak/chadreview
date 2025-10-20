@@ -139,9 +139,8 @@ fn render_labels(labels: &[chadreview_pr_models::Label]) -> Container {
                     border-radius=12
                     font-size=12
                     font-weight=500
-                    background="#ddf4ff"
-                    color="#0969da"
-                    border="1px solid #54aeff66"
+                    background=(format!("#{}", label.color))
+                    color="#ffffff"
                 {
                     (label.name.as_str())
                 }

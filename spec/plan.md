@@ -1585,8 +1585,8 @@ Created packages/github/src/client.rs with complete implementation including Git
           `packages/app/ui/src/pr_header.rs:58-72` - conditionally renders draft badge with inline styling
     - [x] Render author info with avatar and clickable link
           `packages/app/ui/src/pr_header.rs:86-91` - renders author avatar image (32x32, rounded) and username as clickable `anchor` element linking to GitHub profile
-    - [x] Render labels
-          `packages/app/ui/src/pr_header.rs:125-141` - renders labels with inline `padding`, `border-radius`, `font-size`, `font-weight`, `background`, `color`, `border`
+    - [x] Render labels with actual colors
+          `packages/app/ui/src/pr_header.rs:135-147` - renders labels using actual `label.color` from GitHub data via `background=(format!("#{}", label.color))`
     - [x] Render assignees and reviewers with avatars and clickable links
           `packages/app/ui/src/pr_header.rs:183-192,205-214` - renders both with avatar images (24x24, rounded) and clickable `anchor` elements linking to GitHub profiles
     - [x] Render branch information
