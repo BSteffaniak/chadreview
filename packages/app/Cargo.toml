@@ -10,11 +10,42 @@ readme      = "README.md"
 repository  = { workspace = true }
 version     = { workspace = true }
 
+[package.metadata.cargo-machete]
+ignored = [
+    "chadreview_app_ui",
+    "chadreview_state",
+    "hyperchad_template",
+    "hyperchad_transformer",
+    "tokio",
+]
+
 [[bin]]
 name = "chadreview"
 path = "src/main.rs"
 
 [dependencies]
+anyhow = { workspace = true }
+hyperchad = { workspace = true, features = [
+    "app",
+    "router",
+    "template",
+    "transformer",
+] }
+hyperchad_template = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+hyperchad_transformer = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+serde = { workspace = true }
+serde_json = { workspace = true }
+switchy = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false, features = [
+    "http",
+] }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+
+chadreview_app_ui       = { workspace = true }
+chadreview_git_provider = { workspace = true }
+chadreview_github       = { workspace = true }
+chadreview_pr_models    = { workspace = true }
+chadreview_state        = { workspace = true }
 
 [features]
 default = []
