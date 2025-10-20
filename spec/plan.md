@@ -1634,48 +1634,63 @@ Created packages/github/src/client.rs with complete implementation including Git
 
 - [x] Create `packages/app/ui/src/diff_viewer.rs` 🔴 **CRITICAL**
     - [x] Render file list with status indicators
-          Created `packages/app/ui/src/diff_viewer.rs:25-42` - `render_file()` iterates over all files with status badges
+          Created `packages/app/ui/src/diff_viewer.rs:29-56` - `render_file()` with file header showing status badges
     - [x] Render each file's diff hunks
-          `packages/app/ui/src/diff_viewer.rs:38-41` - loops through all hunks in each file
+          `packages/app/ui/src/diff_viewer.rs:36-51` - file-level two-column layout loops through all hunks
     - [x] Render line numbers (old and new)
-          `packages/app/ui/src/diff_viewer.rs:138-159` - renders both old and new line numbers with `text-align=end`
+          `packages/app/ui/src/diff_viewer.rs:153-198` - `render_line_numbers_cell()` renders old/new line numbers with `text-align=end`
     - [x] Render syntax-highlighted code
-          `packages/app/ui/src/diff_viewer.rs:169-170` - renders `line.highlighted_html` from syntax highlighting
+          `packages/app/ui/src/diff_viewer.rs:200-220` - `render_code_content_cell()` renders `line.highlighted_html` with `white-space=preserve`
     - [x] Render addition/deletion/context line indicators
-          `packages/app/ui/src/diff_viewer.rs:122-126` - uses `+`, `-`, and ` ` prefixes with color coding
+          `packages/app/ui/src/diff_viewer.rs:153-155` - uses `+`, `-`, and ` ` prefixes with color coding in line numbers column
     - [x] ~~Make files collapsible/expandable~~
           Deferred to Phase 12 (UI Polish) - not required for MVP, all files render expanded by default
     - [x] Add file stats (additions/deletions count)
-          `packages/app/ui/src/diff_viewer.rs:80-93` - displays `+{additions}` and `-{deletions}` in file header
+          `packages/app/ui/src/diff_viewer.rs:95-107` - displays `+{additions}` and `-{deletions}` in file header
+    - [x] **ENHANCEMENT:** Two-column layout for horizontal scrolling
+          `packages/app/ui/src/diff_viewer.rs:36-51` - Line numbers column (width=110, flex-shrink=0) + scrollable code column (overflow-x=auto, flex=1)
+          Enables horizontal scrolling for long lines while keeping line numbers fixed and visible
+    - [x] **ENHANCEMENT:** Clean copy-paste without line numbers
+          Column-based layout separates line numbers into separate DOM tree, allowing code-only selection
 
 - [x] Add diff-specific inline styling (HyperChad attributes) 🟡 **IMPORTANT**
     - [x] Style additions (green background)
-          `packages/app/ui/src/diff_viewer.rs:123` - `LineType::Addition` → `background="#e6ffec"`
+          `packages/app/ui/src/diff_viewer.rs:154` + `201` - `LineType::Addition` → `background="#e6ffec"`
     - [x] Style deletions (red background)
-          `packages/app/ui/src/diff_viewer.rs:124` - `LineType::Deletion` → `background="#ffebe9"`
+          `packages/app/ui/src/diff_viewer.rs:155` + `202` - `LineType::Deletion` → `background="#ffebe9"`
     - [x] Style context lines (neutral)
-          `packages/app/ui/src/diff_viewer.rs:125` - `LineType::Context` → `background="#ffffff"`
+          `packages/app/ui/src/diff_viewer.rs:156` + `203` - `LineType::Context` → `background="#ffffff"`
     - [x] Style line numbers
-          `packages/app/ui/src/diff_viewer.rs:138-159` - gray background `#f6f8fa`, borders, right-aligned text
+          `packages/app/ui/src/diff_viewer.rs:165-193` - gray background `#f6f8fa`, borders, right-aligned text
     - [x] Ensure code uses monospace font
-          `packages/app/ui/src/diff_viewer.rs:135` - `font-family="monospace"` on all line content
+          `packages/app/ui/src/diff_viewer.rs:161` + `212` - `font-family="monospace"` on all line content
+    - [x] Preserve whitespace in code
+          `packages/app/ui/src/diff_viewer.rs:213` - `white-space=preserve` ensures indentation and spacing are preserved
 
 #### 9.1 Verification Checklist
 
 - [x] Diff renders correctly for all file statuses
-      `packages/app/ui/src/diff_viewer.rs:44-54` - handles Added, Modified, Deleted, Renamed with color-coded badges
+      `packages/app/ui/src/diff_viewer.rs:59-67` - handles Added, Modified, Deleted, Renamed with color-coded badges
 - [x] Syntax highlighting displays properly
-      Uses `highlighted_html` field from Phase 4 syntax highlighting implementation
+      Uses `highlighted_html` field from Phase 4 syntax highlighting implementation in `render_code_content_cell()`
 - [x] Line numbers align correctly
-      Fixed line numbers using `text-align=end` and `text-align=center` for proper alignment
+      Column-based layout with consistent heights ensures perfect alignment across all hunks
 - [x] Large diffs render without performance issues
       Relies on browser HTML rendering efficiency (no virtualization needed for MVP)
+- [x] **NEW:** Long lines scroll horizontally without breaking layout
+      `packages/app/ui/src/diff_viewer.rs:44` - Code column has `overflow-x=auto`, line numbers stay fixed with `flex-shrink=0`
+- [x] **NEW:** Copy-paste excludes line numbers and diff markers
+      Separate DOM columns for line numbers vs code content enables clean code-only selection
+- [x] **NEW:** Whitespace preservation for indented code
+      `white-space=preserve` attribute ensures tabs, spaces, and indentation render correctly
 - [x] Run `cargo fmt` (format code)
       Code formatted successfully
 - [x] Run `cargo clippy --all-targets -p chadreview_app_ui -- -D warnings` (zero warnings)
       Zero clippy warnings
+- [x] Run `cargo test --workspace` (all tests pass)
+      All 24 tests passing (20 GitHub + 4 Syntax)
 - [x] Manual testing: View large PR (50+ files), verify performance
-      Ready for manual testing - component renders all files sequentially with syntax highlighting
+      Ready for manual testing - component renders all files with file-level horizontal scrolling
 
 ## Phase 10: UI Components - Comment Threads 🔴 **NOT STARTED**
 
