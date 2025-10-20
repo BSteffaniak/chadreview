@@ -1220,6 +1220,12 @@ version = "0.1.0"
 [[package]]
 name = "chadreview_app_ui"
 version = "0.1.0"
+dependencies = [
+ "chadreview_pr_models",
+ "hyperchad",
+ "hyperchad_template",
+ "hyperchad_transformer",
+]
 
 [[package]]
 name = "chadreview_git_provider"

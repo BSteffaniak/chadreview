@@ -162,22 +162,12 @@ async fn delete_comment_route(
     Ok(())
 }
 
-fn render_pr_view(_pr: &chadreview_pr_models::PullRequest) -> Container {
+fn render_pr_view(pr: &chadreview_pr_models::PullRequest) -> Container {
     use hyperchad::template::container;
 
     container! {
         div class="pr-view" {
-            header class="pr-header" {
-                h1 { "Pull Request Title" }
-                span class="pr-number" { "#123" }
-            }
-            section class="pr-metadata" {
-                div class="pr-state" { "Open" }
-                div class="pr-author" { "Author Name" }
-            }
-            section class="pr-description" {
-                span { "PR Description" }
-            }
+            (chadreview_app_ui::pr_header::render_pr_header(pr))
         }
     }
     .into()
