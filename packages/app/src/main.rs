@@ -12,16 +12,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("ChadReview - GitHub PR Review Tool");
 
-    let auth_token =
-        std::env::var("GITHUB_TOKEN").unwrap_or_else(|_| "dummy-token-for-compilation".to_string());
     let port = std::env::var("PORT")
         .ok()
         .and_then(|p| p.parse::<u16>().ok())
         .unwrap_or(3000);
     let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 
-    let provider: Arc<dyn chadreview_git_provider::GitProvider> =
-        Arc::new(GitHubProvider::new(auth_token));
+    let mut github_provider = GitHubProvider::new();
+    if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+        github_provider = github_provider.with_token(token);
+    }
+
+    let provider: Arc<dyn chadreview_git_provider::GitProvider> = Arc::new(github_provider);
     let router = routes::create_router(&provider);
 
     println!("Router created with 4 routes:");

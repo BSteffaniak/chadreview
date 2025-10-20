@@ -8,33 +8,45 @@ use chadreview_syntax::SyntaxHighlighter;
 
 pub struct GitHubProvider {
     http_client: reqwest::Client,
-    auth_token: String,
+    auth_token: Option<String>,
     base_url: String,
 }
 
 impl GitHubProvider {
-    /// Create a new GitHub provider.
+    /// Create a new GitHub provider without authentication.
     ///
     /// # Panics
     ///
     /// * If the `reqwest::Client` fails to build.
     #[must_use]
-    pub fn new(auth_token: String) -> Self {
+    pub fn new() -> Self {
         let http_client = reqwest::Client::builder()
             .user_agent("ChadReview")
             .build()
             .unwrap();
         Self {
             http_client,
-            auth_token,
+            auth_token: None,
             base_url: "https://api.github.com".to_string(),
         }
+    }
+
+    #[must_use]
+    pub fn with_token(mut self, token: String) -> Self {
+        self.auth_token = Some(token);
+        self
     }
 
     #[must_use]
     pub fn with_base_url(mut self, base_url: String) -> Self {
         self.base_url = base_url;
         self
+    }
+}
+
+impl Default for GitHubProvider {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -46,13 +58,16 @@ impl GitProvider for GitHubProvider {
             self.base_url, owner, repo, number
         );
         log::debug!("GET {url}");
-        let response = self
+        let mut request = self
             .http_client
             .get(&url)
-            .bearer_auth(&self.auth_token)
-            .header("Accept", "application/vnd.github.v3+json")
-            .send()
-            .await?;
+            .header("Accept", "application/vnd.github.v3+json");
+
+        if let Some(token) = &self.auth_token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
 
         if !response.status().is_success() {
             anyhow::bail!("GitHub API error: {}", response.status());
@@ -87,13 +102,16 @@ impl GitProvider for GitHubProvider {
             self.base_url, owner, repo, number
         );
         log::debug!("GET {files_url}");
-        let files_response = self
+        let mut files_request = self
             .http_client
             .get(&files_url)
-            .bearer_auth(&self.auth_token)
-            .header("Accept", "application/vnd.github.v3+json")
-            .send()
-            .await?;
+            .header("Accept", "application/vnd.github.v3+json");
+
+        if let Some(token) = &self.auth_token {
+            files_request = files_request.bearer_auth(token);
+        }
+
+        let files_response = files_request.send().await?;
 
         if !files_response.status().is_success() {
             anyhow::bail!("GitHub API error: {}", files_response.status());
@@ -105,13 +123,16 @@ impl GitProvider for GitHubProvider {
             "{}/repos/{}/{}/pulls/{}",
             self.base_url, owner, repo, number
         );
-        let diff_response = self
+        let mut diff_request = self
             .http_client
             .get(&diff_url)
-            .bearer_auth(&self.auth_token)
-            .header("Accept", "application/vnd.github.v3.diff")
-            .send()
-            .await?;
+            .header("Accept", "application/vnd.github.v3.diff");
+
+        if let Some(token) = &self.auth_token {
+            diff_request = diff_request.bearer_auth(token);
+        }
+
+        let diff_response = diff_request.send().await?;
 
         if !diff_response.status().is_success() {
             anyhow::bail!("GitHub API error: {}", diff_response.status());
@@ -153,13 +174,16 @@ impl GitProvider for GitHubProvider {
             self.base_url, owner, repo, number
         );
         log::debug!("GET {review_comments_url}");
-        let review_response = self
+        let mut review_request = self
             .http_client
             .get(&review_comments_url)
-            .bearer_auth(&self.auth_token)
-            .header("Accept", "application/vnd.github.v3+json")
-            .send()
-            .await?;
+            .header("Accept", "application/vnd.github.v3+json");
+
+        if let Some(token) = &self.auth_token {
+            review_request = review_request.bearer_auth(token);
+        }
+
+        let review_response = review_request.send().await?;
 
         if !review_response.status().is_success() {
             anyhow::bail!("GitHub API error: {}", review_response.status());
@@ -171,13 +195,16 @@ impl GitProvider for GitHubProvider {
             "{}/repos/{}/{}/issues/{}/comments",
             self.base_url, owner, repo, number
         );
-        let issue_response = self
+        let mut issue_request = self
             .http_client
             .get(&issue_comments_url)
-            .bearer_auth(&self.auth_token)
-            .header("Accept", "application/vnd.github.v3+json")
-            .send()
-            .await?;
+            .header("Accept", "application/vnd.github.v3+json");
+
+        if let Some(token) = &self.auth_token {
+            issue_request = issue_request.bearer_auth(token);
+        }
+
+        let issue_response = issue_request.send().await?;
 
         if !issue_response.status().is_success() {
             anyhow::bail!("GitHub API error: {}", issue_response.status());
@@ -228,14 +255,17 @@ impl GitProvider for GitHubProvider {
                     body["in_reply_to"] = serde_json::json!(reply_to);
                 }
 
-                let response = self
+                let mut request = self
                     .http_client
                     .post(&url)
-                    .bearer_auth(&self.auth_token)
                     .header("Accept", "application/vnd.github.v3+json")
-                    .json(&body)
-                    .send()
-                    .await?;
+                    .json(&body);
+
+                if let Some(token) = &self.auth_token {
+                    request = request.bearer_auth(token);
+                }
+
+                let response = request.send().await?;
 
                 if !response.status().is_success() {
                     anyhow::bail!("GitHub API error: {}", response.status());
@@ -260,14 +290,17 @@ impl GitProvider for GitHubProvider {
                     body["in_reply_to"] = serde_json::json!(reply_to);
                 }
 
-                let response = self
+                let mut request = self
                     .http_client
                     .post(&url)
-                    .bearer_auth(&self.auth_token)
                     .header("Accept", "application/vnd.github.v3+json")
-                    .json(&body)
-                    .send()
-                    .await?;
+                    .json(&body);
+
+                if let Some(token) = &self.auth_token {
+                    request = request.bearer_auth(token);
+                }
+
+                let response = request.send().await?;
 
                 if !response.status().is_success() {
                     anyhow::bail!("GitHub API error: {}", response.status());
@@ -287,14 +320,17 @@ impl GitProvider for GitHubProvider {
                     "body": comment.body,
                 });
 
-                let response = self
+                let mut request = self
                     .http_client
                     .post(&url)
-                    .bearer_auth(&self.auth_token)
                     .header("Accept", "application/vnd.github.v3+json")
-                    .json(&body)
-                    .send()
-                    .await?;
+                    .json(&body);
+
+                if let Some(token) = &self.auth_token {
+                    request = request.bearer_auth(token);
+                }
+
+                let response = request.send().await?;
 
                 if !response.status().is_success() {
                     anyhow::bail!("GitHub API error: {}", response.status());
@@ -313,14 +349,17 @@ impl GitProvider for GitHubProvider {
 
         let review_url = format!("{}/repos/*/pulls/comments/{}", self.base_url, comment_id);
         log::debug!("PATCH {review_url}");
-        let review_response = self
+        let mut review_request = self
             .http_client
             .patch(&review_url)
-            .bearer_auth(&self.auth_token)
             .header("Accept", "application/vnd.github.v3+json")
-            .json(&request_body)
-            .send()
-            .await?;
+            .json(&request_body);
+
+        if let Some(token) = &self.auth_token {
+            review_request = review_request.bearer_auth(token);
+        }
+
+        let review_response = review_request.send().await?;
 
         if review_response.status().is_success() {
             let comment_data: serde_json::Value = review_response.json().await?;
@@ -329,14 +368,17 @@ impl GitProvider for GitHubProvider {
 
         let issue_url = format!("{}/repos/*/issues/comments/{}", self.base_url, comment_id);
         log::debug!("PATCH {issue_url}");
-        let issue_response = self
+        let mut issue_request = self
             .http_client
             .patch(&issue_url)
-            .bearer_auth(&self.auth_token)
             .header("Accept", "application/vnd.github.v3+json")
-            .json(&request_body)
-            .send()
-            .await?;
+            .json(&request_body);
+
+        if let Some(token) = &self.auth_token {
+            issue_request = issue_request.bearer_auth(token);
+        }
+
+        let issue_response = issue_request.send().await?;
 
         if !issue_response.status().is_success() {
             anyhow::bail!("GitHub API error: {}", issue_response.status());
@@ -349,13 +391,16 @@ impl GitProvider for GitHubProvider {
     async fn delete_comment(&self, comment_id: u64) -> Result<()> {
         let review_url = format!("{}/repos/*/pulls/comments/{}", self.base_url, comment_id);
         log::debug!("DELETE {review_url}");
-        let review_response = self
+        let mut review_request = self
             .http_client
             .delete(&review_url)
-            .bearer_auth(&self.auth_token)
-            .header("Accept", "application/vnd.github.v3+json")
-            .send()
-            .await?;
+            .header("Accept", "application/vnd.github.v3+json");
+
+        if let Some(token) = &self.auth_token {
+            review_request = review_request.bearer_auth(token);
+        }
+
+        let review_response = review_request.send().await?;
 
         if review_response.status().is_success() {
             return Ok(());
@@ -363,13 +408,16 @@ impl GitProvider for GitHubProvider {
 
         let issue_url = format!("{}/repos/*/issues/comments/{}", self.base_url, comment_id);
         log::debug!("DELETE {issue_url}");
-        let issue_response = self
+        let mut issue_request = self
             .http_client
             .delete(&issue_url)
-            .bearer_auth(&self.auth_token)
-            .header("Accept", "application/vnd.github.v3+json")
-            .send()
-            .await?;
+            .header("Accept", "application/vnd.github.v3+json");
+
+        if let Some(token) = &self.auth_token {
+            issue_request = issue_request.bearer_auth(token);
+        }
+
+        let issue_response = issue_request.send().await?;
 
         if !issue_response.status().is_success() {
             anyhow::bail!("GitHub API error: {}", issue_response.status());
@@ -575,7 +623,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let pr = client.get_pr("owner", "repo", 123).await.unwrap();
 
@@ -618,7 +668,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let pr = client.get_pr("owner", "repo", 456).await.unwrap();
 
@@ -657,7 +709,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let comments = client.get_comments("owner", "repo", 123).await.unwrap();
 
@@ -707,7 +761,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let comments = client.get_comments("owner", "repo", 123).await.unwrap();
 
@@ -773,7 +829,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let comments = client.get_comments("owner", "repo", 123).await.unwrap();
 
@@ -834,7 +892,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let comments = client.get_comments("owner", "repo", 123).await.unwrap();
 
@@ -879,7 +939,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let create_comment = CreateComment {
             body: "New line comment".to_string(),
@@ -930,7 +992,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let create_comment = CreateComment {
             body: "New general comment".to_string(),
@@ -977,7 +1041,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let create_comment = CreateComment {
             body: "Reply to comment".to_string(),
@@ -1007,7 +1073,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("bad-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("bad-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let create_comment = CreateComment {
             body: "Should fail".to_string(),
@@ -1051,7 +1119,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let comment = client
             .update_comment(6001, "Updated comment body".to_string())
@@ -1091,7 +1161,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let comment = client
             .update_comment(6002, "Updated general comment".to_string())
@@ -1122,7 +1194,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("bad-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("bad-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let result = client.update_comment(6003, "Should fail".to_string()).await;
 
@@ -1139,7 +1213,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let result = client.delete_comment(7001).await;
 
@@ -1162,7 +1238,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("test-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let result = client.delete_comment(7002).await;
 
@@ -1185,7 +1263,9 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let client = GitHubProvider::new("bad-token".to_string()).with_base_url(mock_server.uri());
+        let client = GitHubProvider::new()
+            .with_token("bad-token".to_string())
+            .with_base_url(mock_server.uri());
 
         let result = client.delete_comment(7003).await;
 
