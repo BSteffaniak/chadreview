@@ -11,6 +11,8 @@ repository  = { workspace = true }
 version     = { workspace = true }
 
 [dependencies]
+anyhow                         = { workspace = true, features = ["std"] }
+async-trait                    = { workspace = true }
 chadreview_git_provider_models = { workspace = true }
 chadreview_pr_models           = { workspace = true }
 
