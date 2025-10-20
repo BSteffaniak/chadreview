@@ -1513,12 +1513,13 @@ Created packages/github/src/client.rs with complete implementation including Git
 
 - [x] Add dependencies to `packages/app/Cargo.toml` 🔴 **CRITICAL**
     - [x] Verify HyperChad git dependency resolves correctly
-          packages/app/Cargo.toml:19-24 - hyperchad with features ["app", "router", "template", "transformer"]
+          packages/app/Cargo.toml:28-36 - hyperchad with features ["app", "renderer", "renderer-html", "renderer-html-web-server-actix", "router", "template", "transformer"]
     - [x] Add internal crate dependencies:
           packages/app/Cargo.toml:33-37 - chadreview_app_ui, chadreview_state, chadreview_git_provider, chadreview_github, chadreview_pr_models
     - [x] Add HyperChad packages:
-          packages/app/Cargo.toml:18-31 - anyhow, hyperchad, hyperchad_template, hyperchad_transformer, serde, serde_json, switchy, thiserror, tokio
+          packages/app/Cargo.toml:27-42 - anyhow, hyperchad (with web server features), hyperchad_template, hyperchad_transformer, serde, serde_json, switchy (with async-tokio), thiserror, tokio
           Note: hyperchad_template and hyperchad_transformer added separately due to macro limitation
+          Web server features: renderer, renderer-html, renderer-html-web-server-actix enable HTTP serving
 
 - [x] Create application structure 🔴 **CRITICAL**
     - [x] Create `src/lib.rs` with module declarations
@@ -1530,7 +1531,8 @@ Created packages/github/src/client.rs with complete implementation including Git
     - [x] Create `src/events.rs` for event handlers
           packages/app/src/events.rs - placeholder for Phase 8
     - [x] Update `main.rs` with HyperChad initialization
-          packages/app/src/main.rs:1-27 - creates GitHubProvider, initializes router, prints route info
+          packages/app/src/main.rs:1-55 - creates GitHubProvider, initializes router, creates web server app with router_to_web_server(), starts Actix HTTP server on configured port
+          Reads PORT (default 3000) and HOST (default 127.0.0.1) from environment variables
 
 - [x] Implement basic routing 🔴 **CRITICAL**
     - [x] Route: `GET /pr?owner=<owner>&repo=<repo>&number=<number>` - Main PR view
@@ -1554,8 +1556,10 @@ Created packages/github/src/client.rs with complete implementation including Git
       Zero clippy warnings
 - [x] Run `cargo build -p chadreview_app` (compiles)
       Builds successfully in 3.07s
-- [x] Run `cargo run -p chadreview_app` (starts application)
-      Runs successfully, prints router creation confirmation with all 4 routes
+- [x] Run `cargo run -p chadreview_app` (starts web server)
+      Server starts successfully on http://127.0.0.1:3000 (default), listens for HTTP requests
+      Configured via PORT and HOST environment variables
+      Routes are accessible via HTTP (tested with PORT=9000 - server keeps running until killed)
 
 ## Phase 8: UI Components - PR Header 🔴 **NOT STARTED**
 

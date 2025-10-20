@@ -13,10 +13,19 @@ pub struct GitHubProvider {
 }
 
 impl GitHubProvider {
+    /// Create a new GitHub provider.
+    ///
+    /// # Panics
+    ///
+    /// * If the `reqwest::Client` fails to build.
     #[must_use]
     pub fn new(auth_token: String) -> Self {
+        let http_client = reqwest::Client::builder()
+            .user_agent("ChadReview")
+            .build()
+            .unwrap();
         Self {
-            http_client: reqwest::Client::new(),
+            http_client,
             auth_token,
             base_url: "https://api.github.com".to_string(),
         }
@@ -36,6 +45,7 @@ impl GitProvider for GitHubProvider {
             "{}/repos/{}/{}/pulls/{}",
             self.base_url, owner, repo, number
         );
+        log::debug!("GET {url}");
         let response = self
             .http_client
             .get(&url)
@@ -76,6 +86,7 @@ impl GitProvider for GitHubProvider {
             "{}/repos/{}/{}/pulls/{}/files",
             self.base_url, owner, repo, number
         );
+        log::debug!("GET {files_url}");
         let files_response = self
             .http_client
             .get(&files_url)
@@ -141,6 +152,7 @@ impl GitProvider for GitHubProvider {
             "{}/repos/{}/{}/pulls/{}/comments",
             self.base_url, owner, repo, number
         );
+        log::debug!("GET {review_comments_url}");
         let review_response = self
             .http_client
             .get(&review_comments_url)
@@ -204,6 +216,7 @@ impl GitProvider for GitHubProvider {
                     "{}/repos/{}/{}/pulls/{}/comments",
                     self.base_url, owner, repo, number
                 );
+                log::debug!("POST {url}");
 
                 let mut body = serde_json::json!({
                     "body": comment.body,
@@ -236,6 +249,7 @@ impl GitProvider for GitHubProvider {
                     "{}/repos/{}/{}/pulls/{}/comments",
                     self.base_url, owner, repo, number
                 );
+                log::debug!("POST {url}");
 
                 let mut body = serde_json::json!({
                     "body": comment.body,
@@ -267,6 +281,7 @@ impl GitProvider for GitHubProvider {
                     "{}/repos/{}/{}/issues/{}/comments",
                     self.base_url, owner, repo, number
                 );
+                log::debug!("POST {url}");
 
                 let body = serde_json::json!({
                     "body": comment.body,
@@ -297,6 +312,7 @@ impl GitProvider for GitHubProvider {
         });
 
         let review_url = format!("{}/repos/*/pulls/comments/{}", self.base_url, comment_id);
+        log::debug!("PATCH {review_url}");
         let review_response = self
             .http_client
             .patch(&review_url)
@@ -312,6 +328,7 @@ impl GitProvider for GitHubProvider {
         }
 
         let issue_url = format!("{}/repos/*/issues/comments/{}", self.base_url, comment_id);
+        log::debug!("PATCH {issue_url}");
         let issue_response = self
             .http_client
             .patch(&issue_url)
@@ -331,6 +348,7 @@ impl GitProvider for GitHubProvider {
 
     async fn delete_comment(&self, comment_id: u64) -> Result<()> {
         let review_url = format!("{}/repos/*/pulls/comments/{}", self.base_url, comment_id);
+        log::debug!("DELETE {review_url}");
         let review_response = self
             .http_client
             .delete(&review_url)
@@ -344,6 +362,7 @@ impl GitProvider for GitHubProvider {
         }
 
         let issue_url = format!("{}/repos/*/issues/comments/{}", self.base_url, comment_id);
+        log::debug!("DELETE {issue_url}");
         let issue_response = self
             .http_client
             .delete(&issue_url)

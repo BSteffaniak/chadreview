@@ -35,15 +35,28 @@ chadreview_pr           = { path = "packages/pr", version = "0.1.0", default-fea
 chadreview_state        = { path = "packages/state", version = "0.1.0", default-features = false }
 chadreview_syntax       = { path = "packages/syntax", version = "0.1.0", default-features = false }
 
-anyhow      = { version = "1", default-features = false }
+anyhow = { version = "1", default-features = false }
 async-trait = { version = "0.1", default-features = false }
-chrono      = { version = "0.4", default-features = false }
-regex       = { version = "1", default-features = false }
-reqwest     = { version = "0.11", default-features = false }
-serde       = { version = "1", default-features = false }
-serde_json  = { version = "1", default-features = false }
-syntect     = { version = "5", default-features = false }
-thiserror   = { version = "1", default-features = false }
-tokio       = { version = "1", default-features = false }
+chrono = { version = "0.4", default-features = false }
+log = { version = "0.4.28", default-features = false, features = [
+    "release_max_level_trace",
+] }
+regex = { version = "1", default-features = false }
+reqwest = { version = "0.11", default-features = false }
+serde = { version = "1", default-features = false }
+serde_json = { version = "1", default-features = false }
+syntect = { version = "5", default-features = false }
+thiserror = { version = "1", default-features = false }
+tokio = { version = "1", default-features = false }
 
-hyperchad = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+hyperchad             = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+hyperchad_template    = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+hyperchad_transformer = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+moosicbox_logging     = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+switchy               = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+
+# hyperchad             = { path = "../MoosicBox/packages/hyperchad", default-features = false }
+# hyperchad_template    = { path = "../MoosicBox/packages/hyperchad/template", default-features = false }
+# hyperchad_transformer = { path = "../MoosicBox/packages/hyperchad/transformer", default-features = false }
+# moosicbox_logging     = { path = "../MoosicBox/packages/logging", default-features = false }
+# switchy               = { path = "../MoosicBox/packages/switchy", default-features = false }

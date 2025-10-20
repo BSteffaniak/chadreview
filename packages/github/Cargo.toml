@@ -17,8 +17,9 @@ chadreview_git_provider = { workspace = true }
 chadreview_pr_models = { workspace = true }
 chadreview_syntax = { workspace = true }
 chrono = { workspace = true }
+log = { workspace = true }
 regex = { workspace = true, features = ["std"] }
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 serde_json = { workspace = true }
 syntect = { workspace = true, features = [
     "default-syntaxes",

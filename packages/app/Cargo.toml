@@ -27,19 +27,22 @@ path = "src/main.rs"
 anyhow = { workspace = true }
 hyperchad = { workspace = true, features = [
     "app",
+    "renderer",
     "router",
     "template",
     "transformer",
 ] }
-hyperchad_template = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
-hyperchad_transformer = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+hyperchad_template = { workspace = true, default-features = false }
+hyperchad_transformer = { workspace = true, default-features = false }
+log = { workspace = true }
+moosicbox_logging = { workspace = true, features = ["free_log"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-switchy = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false, features = [
+switchy = { workspace = true, default-features = false, features = [
+    "async-tokio",
     "http",
 ] }
 thiserror = { workspace = true }
-tokio = { workspace = true, features = ["full"] }
 
 chadreview_app_ui       = { workspace = true }
 chadreview_git_provider = { workspace = true }
@@ -48,22 +51,22 @@ chadreview_pr_models    = { workspace = true }
 chadreview_state        = { workspace = true }
 
 [features]
-default = []
+default = ["assets"]
 
 bitbucket = []
 github    = []
 gitlab    = []
 
-actix         = []
-assets        = []
-dev           = []
-egui-glow     = []
-egui-wgpu     = []
-fltk          = []
-html          = []
-lambda        = []
-static-routes = []
-vanilla-js    = []
+actix         = ["hyperchad/renderer-html-actix"]
+assets        = ["hyperchad/renderer-assets"]
+dev           = ["assets", "static-routes"]
+egui-glow     = ["hyperchad/renderer-egui-glow"]
+egui-wgpu     = ["hyperchad/renderer-egui-wgpu"]
+fltk          = ["hyperchad/renderer-fltk"]
+html          = ["hyperchad/renderer-html"]
+lambda        = ["hyperchad/renderer-html-lambda"]
+static-routes = ["hyperchad/router-static-routes"]
+vanilla-js    = ["html", "hyperchad/renderer-vanilla-js"]
 
 fail-on-warnings = []
 
