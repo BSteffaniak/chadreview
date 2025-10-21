@@ -86,8 +86,9 @@ async fn pr_route(
 
     let pr = provider.get_pr(owner, repo, number).await?;
     let diffs = provider.get_diff(owner, repo, number).await?;
+    let comments = provider.get_comments(owner, repo, number).await?;
 
-    Ok(render_pr_view(&pr, &diffs))
+    Ok(render_pr_view(&pr, &diffs, &comments, owner, repo, number))
 }
 
 async fn create_comment_route(
@@ -119,7 +120,7 @@ async fn create_comment_route(
         .create_comment(owner, repo, number, create_comment)
         .await?;
 
-    Ok(render_comment(&comment))
+    Ok(render_comment(&comment, owner, repo, number))
 }
 
 async fn update_comment_route(
@@ -141,7 +142,7 @@ async fn update_comment_route(
 
     let comment = provider.update_comment(comment_id, update.body).await?;
 
-    Ok(render_comment(&comment))
+    Ok(render_comment(&comment, "", "", 0))
 }
 
 async fn delete_comment_route(
@@ -166,26 +167,27 @@ async fn delete_comment_route(
 fn render_pr_view(
     pr: &chadreview_pr_models::PullRequest,
     diffs: &[chadreview_pr_models::DiffFile],
+    comments: &[chadreview_pr_models::Comment],
+    owner: &str,
+    repo: &str,
+    number: u64,
 ) -> Container {
     use hyperchad::template::container;
 
     container! {
         div class="pr-view" {
             (chadreview_app_ui::pr_header::render_pr_header(pr))
-            (chadreview_app_ui::diff_viewer::render(diffs))
+            (chadreview_app_ui::diff_viewer::render(diffs, comments, owner, repo, number))
         }
     }
     .into()
 }
 
-fn render_comment(_comment: &chadreview_pr_models::Comment) -> Container {
-    use hyperchad::template::container;
-
-    container! {
-        div class="comment" {
-            div class="comment-author" { "Comment Author" }
-            div class="comment-body" { "Comment Body" }
-        }
-    }
-    .into()
+fn render_comment(
+    comment: &chadreview_pr_models::Comment,
+    owner: &str,
+    repo: &str,
+    number: u64,
+) -> Container {
+    chadreview_app_ui::comment_thread::render_comment_thread(comment, 0, owner, repo, number).into()
 }

@@ -11,9 +11,15 @@ repository  = { workspace = true }
 version     = { workspace = true }
 
 [dependencies]
-chadreview_pr_models  = { workspace = true }
-hyperchad             = { workspace = true, features = ["router", "template"] }
-hyperchad_template    = { workspace = true }
+chadreview_pr_models = { workspace = true }
+chrono = { workspace = true }
+hyperchad = { workspace = true, features = [
+    "logic",
+    "router",
+    "template",
+    "transformer",
+] }
+hyperchad_template = { workspace = true }
 hyperchad_transformer = { workspace = true }
 
 [features]

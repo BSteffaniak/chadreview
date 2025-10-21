@@ -2,5 +2,6 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![allow(clippy::multiple_crate_versions)]
 
+pub mod comment_thread;
 pub mod diff_viewer;
 pub mod pr_header;

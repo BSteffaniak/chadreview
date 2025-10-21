@@ -1,8 +1,18 @@
-use chadreview_pr_models::{DiffFile, DiffHunk, DiffLine, FileStatus, LineType};
+use chadreview_pr_models::{
+    Comment, CommentType, DiffFile, DiffHunk, DiffLine, FileStatus, LineType,
+};
 use hyperchad::template::{Containers, container};
 
+use crate::comment_thread;
+
 #[must_use]
-pub fn render(diffs: &[DiffFile]) -> Containers {
+pub fn render(
+    diffs: &[DiffFile],
+    comments: &[Comment],
+    owner: &str,
+    repo: &str,
+    number: u64,
+) -> Containers {
     if diffs.is_empty() {
         return container! {
             div padding=20 color="#57606a" {
@@ -17,19 +27,26 @@ pub fn render(diffs: &[DiffFile]) -> Containers {
                 "Files changed"
             }
             @for diff_file in diffs {
-                (render_file(diff_file))
+                (render_file(diff_file, comments, owner, repo, number))
             }
         }
     }
 }
 
-fn render_file(file: &DiffFile) -> Containers {
+fn render_file(
+    file: &DiffFile,
+    comments: &[Comment],
+    owner: &str,
+    repo: &str,
+    number: u64,
+) -> Containers {
     let file_stats = render_file_stats(file);
     let file_header = render_file_header(file, &file_stats);
 
     container! {
         div margin-bottom=24 border="1px solid #d0d7de" border-radius=6 {
             (file_header)
+            (render_file_level_comments(comments, &file.filename, owner, repo, number))
             div direction=row {
                 div flex-shrink=1 flex-grow=0 {
                     @for hunk in &file.hunks {
@@ -53,6 +70,9 @@ fn render_file(file: &DiffFile) -> Containers {
                             (render_hunk_header_for_code_column(hunk))
                             @for line in &hunk.lines {
                                 (render_code_content_cell(line))
+                                @if let Some(new_line_num) = line.new_line_number {
+                                    (render_line_comments(comments, &file.filename, new_line_num, owner, repo, number))
+                                }
                             }
                         }
                     }
@@ -260,4 +280,57 @@ fn render_code_content_cell(line: &DiffLine) -> Containers {
 
 fn render_line_number(num: Option<usize>) -> String {
     num.map_or_else(String::new, |n| n.to_string())
+}
+
+fn render_line_comments(
+    comments: &[Comment],
+    file_path: &str,
+    line: usize,
+    owner: &str,
+    repo: &str,
+    number: u64,
+) -> Containers {
+    let mut line_comments = comments
+        .iter()
+        .filter(|c| matches!(&c.comment_type, CommentType::LineLevelComment { path, line: l } if path == file_path && *l == line))
+        .peekable();
+
+    let target_id = format!("line-{line}-comments");
+
+    container! {
+        (comment_thread::render_add_comment_button(file_path, line))
+        @if line_comments.peek().is_some() {
+            div id=(target_id) direction=column gap=8 margin-top=8 position=relative {
+                @for comment in line_comments {
+                    (comment_thread::render_comment_thread(comment, 0, owner, repo, number))
+                }
+                (comment_thread::render_create_comment_form(owner, repo, number, file_path, line))
+            }
+        }
+    }
+}
+
+fn render_file_level_comments(
+    comments: &[Comment],
+    file_path: &str,
+    owner: &str,
+    repo: &str,
+    number: u64,
+) -> Containers {
+    let file_comments: Vec<&Comment> = comments
+        .iter()
+        .filter(|c| matches!(&c.comment_type, CommentType::FileLevelComment { path } if path == file_path))
+        .collect();
+
+    if file_comments.is_empty() {
+        return container! { div {} };
+    }
+
+    container! {
+        div direction=column gap=12 padding=12 background="#f6f8fa" margin-bottom=12 {
+            @for comment in file_comments {
+                (comment_thread::render_comment_thread(comment, 0, owner, repo, number))
+            }
+        }
+    }
 }
