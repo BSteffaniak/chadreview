@@ -13,8 +13,8 @@ static HUNK_HEADER_REGEX: LazyLock<Regex> =
 pub fn parse_unified_diff(
     filename: &str,
     status: FileStatus,
-    additions: usize,
-    deletions: usize,
+    additions: u64,
+    deletions: u64,
     diff_text: &str,
     highlighter: &SyntaxHighlighter,
 ) -> Result<DiffFile, String> {
@@ -51,17 +51,17 @@ fn parse_hunk(
         .captures(header)
         .ok_or_else(|| format!("Invalid hunk header: {header}"))?;
 
-    let old_start = captures[1].parse::<usize>().unwrap();
+    let old_start = captures[1].parse::<u64>().unwrap();
     let old_lines = if captures[2].is_empty() {
         1
     } else {
-        captures[2].parse::<usize>().unwrap()
+        captures[2].parse::<u64>().unwrap()
     };
-    let new_start = captures[3].parse::<usize>().unwrap();
+    let new_start = captures[3].parse::<u64>().unwrap();
     let new_lines = if captures[4].is_empty() {
         1
     } else {
-        captures[4].parse::<usize>().unwrap()
+        captures[4].parse::<u64>().unwrap()
     };
 
     *i += 1;

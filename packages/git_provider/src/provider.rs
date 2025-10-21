@@ -48,7 +48,7 @@ pub trait GitProvider: Send + Sync {
     /// * `owner` - Repository owner username or organization
     /// * `repo` - Repository name
     /// * `number` - Pull request number
-    /// * `comment` - Comment creation request with body, type, and optional reply target
+    /// * `comment` - Comment creation request with body and type
     ///
     /// # Returns
     /// The created comment with server-assigned ID and timestamps.
@@ -63,18 +63,37 @@ pub trait GitProvider: Send + Sync {
     /// Updates an existing comment body.
     ///
     /// # Arguments
+    /// * `owner` - Repository owner username or organization
+    /// * `repo` - Repository name
+    /// * `number` - Pull request number
     /// * `comment_id` - Comment ID to update
     /// * `body` - New comment body text
     ///
     /// # Returns
     /// The updated comment with new body and updated timestamp.
-    async fn update_comment(&self, comment_id: u64, body: String) -> Result<Comment>;
+    async fn update_comment(
+        &self,
+        owner: &str,
+        repo: &str,
+        number: u64,
+        comment_id: u64,
+        body: String,
+    ) -> Result<Comment>;
 
     /// Deletes a comment.
     ///
     /// # Arguments
+    /// * `owner` - Repository owner username or organization
+    /// * `repo` - Repository name
+    /// * `number` - Pull request number
     /// * `comment_id` - Comment ID to delete
-    async fn delete_comment(&self, comment_id: u64) -> Result<()>;
+    async fn delete_comment(
+        &self,
+        owner: &str,
+        repo: &str,
+        number: u64,
+        comment_id: u64,
+    ) -> Result<()>;
 
     /// Returns the provider name identifier.
     ///

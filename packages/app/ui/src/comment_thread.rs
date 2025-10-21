@@ -1,4 +1,4 @@
-use chadreview_pr_models::Comment;
+use chadreview_pr_models::{Comment, DiffLine};
 use hyperchad::template::{Containers, container};
 use hyperchad::transformer::models::SwapTarget;
 
@@ -17,66 +17,62 @@ pub fn render_comment_thread(
             margin-left=(margin_left)
             border-left="2px solid #d0d7de"
             padding-left=12
+            gap=12
         {
-            (render_comment_item(comment, owner, repo, number))
+            (render_comment_item(owner, repo, number, comment))
             @for reply in &comment.replies {
                 (render_comment_thread(reply, depth + 1, owner, repo, number))
             }
+            (render_reply_form(comment, owner, repo, number))
         }
     }
 }
 
 #[must_use]
-pub fn render_comment_item(
-    comment: &Comment,
-    _owner: &str,
-    _repo: &str,
-    _number: u64,
-) -> Containers {
+pub fn render_comment_item(owner: &str, repo: &str, number: u64, comment: &Comment) -> Containers {
     let formatted_time = format_timestamp(&comment.created_at);
 
     container! {
         div
-            margin-bottom=12
             padding=12
             background="#ffffff"
             border="1px solid #d0d7de"
             border-radius=6
             max-width=100%
+            gap=8
         {
-            div direction=row align-items=center gap=8 margin-bottom=8 {
+            div direction=row align-items=center gap=8 {
                 image
                     width=24
                     height=24
                     border-radius=12
                     background="#d0d7de"
-                    src=(comment.author.avatar_url.as_str())
+                    src=(comment.author.avatar_url)
                 {}
                 anchor
                     color="#0969da"
                     font-weight=600
                     font-size=14
-                    href=(comment.author.html_url.as_str())
+                    href=(comment.author.html_url)
                 {
-                    (comment.author.username.as_str())
+                    (comment.author.username)
                 }
                 span font-size=12 color="#57606a" {
-                    (formatted_time.as_str())
+                    (formatted_time)
                 }
             }
             div
                 id=(format!("comment-{}-body", comment.id))
                 color="#24292f"
                 font-size=14
-                margin-bottom=8
                 white-space=preserve-wrap
             {
-                (comment.body.as_str())
+                (comment.body)
             }
             div direction=row gap=12 {
                 (render_reply_button(comment))
                 (render_edit_button(comment))
-                (render_delete_button(comment))
+                (render_delete_button(owner, repo, number, comment))
             }
         }
     }
@@ -92,31 +88,29 @@ pub fn render_create_comment_form(
     repo: &str,
     number: u64,
     file_path: &str,
-    line: usize,
+    line: &DiffLine,
 ) -> Containers {
     let form_id = format!("comment-form-{file_path}-{line}");
     let target_id = format!("line-{line}-comments");
     let api_url = format!("/api/pr/comment?owner={owner}&repo={repo}&number={number}");
-    let line_str = line.to_string();
 
     container! {
         form
-            id=(form_id.as_str())
+            id=(form_id)
             hidden
-            hx-post=(api_url.as_str())
+            hx-post=(api_url)
             hx-swap=(SwapTarget::Id(target_id))
             padding=12
             background="#ffffff"
             border="1px solid #d0d7de"
             border-radius=6
-            margin-top=8
             direction=column
             gap=8
         {
             input type=hidden name="path" value=(file_path);
-            input type=hidden name="line" value=(line_str.as_str());
-            input type=hidden name="comment_type" value="LineLevelComment";
-            textarea name="body" placeholder="Add a comment..." height=80 width=100%;
+            input type=hidden name="line" value=(line);
+            input type=hidden name="type" value="line_level_comment";
+            textarea name="body" placeholder="Add a comment..." height=80;
             div direction=row gap=8 {
                 button
                     type=submit
@@ -138,7 +132,7 @@ pub fn render_create_comment_form(
                     padding-y=8
                     border-radius=6
                     cursor=pointer
-                    fx-click=fx { hide(form_id) }
+                    fx-click=fx { element(form_id).no_display() }
                 {
                     "Cancel"
                 }
@@ -157,48 +151,50 @@ pub fn render_reply_form(
     let form_id = format!("reply-form-{}", parent_comment.id);
     let target_id = format!("comment-{}-replies", parent_comment.id);
     let api_url = format!("/api/pr/comment?owner={owner}&repo={repo}&number={number}");
-    let parent_id_str = parent_comment.id.to_string();
 
     container! {
         form
-            id=(form_id.as_str())
+            id=(form_id)
             hidden
-            hx-post=(api_url.as_str())
+            hx-post=(api_url)
             hx-swap=(SwapTarget::Id(target_id))
-            padding=12
-            background="#f6f8fa"
-            border="1px solid #d0d7de"
-            border-radius=6
-            margin-top=8
-            direction=column
-            gap=8
         {
-            input type=hidden name="in_reply_to" value=(parent_id_str.as_str());
-            textarea name="body" placeholder="Reply..." height=80 width=100%;
-            div direction=row gap=8 {
-                button
-                    type=submit
-                    background="#1a7f37"
-                    color="#ffffff"
-                    padding-x=16
-                    padding-y=8
-                    border-radius=6
-                    font-weight=600
-                    cursor=pointer
-                {
-                    "Reply"
-                }
-                button
-                    type=button
-                    background="transparent"
-                    color="#57606a"
-                    padding-x=16
-                    padding-y=8
-                    border-radius=6
-                    cursor=pointer
-                    fx-click=fx { hide(form_id) }
-                {
-                    "Cancel"
+            div
+                background="#f6f8fa"
+                border="1px solid #d0d7de"
+                border-radius=6
+                padding=12
+                direction=column
+                gap=8
+            {
+                input type=hidden name="in_reply_to" value=(parent_comment.id);
+                input type=hidden name="type" value="reply";
+                textarea name="body" placeholder="Reply..." height=80;
+                div direction=row gap=8 {
+                    button
+                        type=submit
+                        background="#1a7f37"
+                        color="#ffffff"
+                        padding-x=16
+                        padding-y=8
+                        border-radius=6
+                        font-weight=600
+                        cursor=pointer
+                    {
+                        "Reply"
+                    }
+                    button
+                        type=button
+                        background="transparent"
+                        color="#57606a"
+                        padding-x=16
+                        padding-y=8
+                        border-radius=6
+                        cursor=pointer
+                        fx-click=fx { element(form_id).no_display() }
+                    {
+                        "Cancel"
+                    }
                 }
             }
         }
@@ -206,26 +202,28 @@ pub fn render_reply_form(
 }
 
 #[must_use]
-pub fn render_edit_form(comment: &Comment) -> Containers {
+pub fn render_edit_form(owner: &str, repo: &str, number: u64, comment: &Comment) -> Containers {
     let form_id = format!("edit-form-{}", comment.id);
     let target_id = format!("comment-{}", comment.id);
-    let api_url = format!("/api/comment/update?id={}", comment.id);
+    let api_url = format!(
+        "/api/comment/update?owner={owner}&repo={repo}&number={number}&id={}",
+        comment.id
+    );
 
     container! {
         form
-            id=(form_id.as_str())
+            id=(form_id)
             hidden
-            hx-put=(api_url.as_str())
+            hx-put=(api_url)
             hx-swap=(SwapTarget::Id(target_id))
             padding=12
             background="#ffffff"
             border="1px solid #d0d7de"
             border-radius=6
-            margin-top=8
             direction=column
             gap=8
         {
-            textarea name="body" height=80 width=100% { (comment.body.as_str()) }
+            textarea name="body" height=80 { (comment.body) }
             div direction=row gap=8 {
                 button
                     type=submit
@@ -247,7 +245,7 @@ pub fn render_edit_form(comment: &Comment) -> Containers {
                     padding-y=8
                     border-radius=6
                     cursor=pointer
-                    fx-click=fx { hide(form_id) }
+                    fx-click=fx { element(form_id).no_display() }
                 {
                     "Cancel"
                 }
@@ -269,7 +267,7 @@ pub fn render_reply_button(comment: &Comment) -> Containers {
             padding-y=4
             cursor=pointer
             font-size=12
-            fx-click=fx { element(form_id).toggle_visibility() }
+            fx-click=fx { element(form_id).display() }
         {
             "Reply"
         }
@@ -278,7 +276,7 @@ pub fn render_reply_button(comment: &Comment) -> Containers {
 
 #[must_use]
 pub fn render_edit_button(comment: &Comment) -> Containers {
-    let form_id = format!("edit-form-{}", comment.id);
+    let button_id = format!("edit-form-{}", comment.id);
     let body_id = format!("comment-{}-body", comment.id);
 
     container! {
@@ -290,7 +288,7 @@ pub fn render_edit_button(comment: &Comment) -> Containers {
             padding-y=4
             cursor=pointer
             font-size=12
-            fx-click=fx { element(form_id).toggle_visibility(); element(body_id).hide() }
+            fx-click=fx { element(button_id).display(); element(body_id).no_display() }
         {
             "Edit"
         }
@@ -298,13 +296,16 @@ pub fn render_edit_button(comment: &Comment) -> Containers {
 }
 
 #[must_use]
-pub fn render_delete_button(comment: &Comment) -> Containers {
+pub fn render_delete_button(owner: &str, repo: &str, number: u64, comment: &Comment) -> Containers {
     let target_id = format!("comment-{}", comment.id);
-    let api_url = format!("/api/comment/delete?id={}", comment.id);
+    let api_url = format!(
+        "/api/comment/delete?owner={owner}&repo={repo}&number={number}&id={}",
+        comment.id
+    );
 
     container! {
         form
-            hx-delete=(api_url.as_str())
+            hx-delete=(api_url)
             hx-swap=(SwapTarget::Id(target_id))
             direction=row
         {
@@ -324,23 +325,43 @@ pub fn render_delete_button(comment: &Comment) -> Containers {
 }
 
 #[must_use]
-pub fn render_add_comment_button(file_path: &str, line: usize) -> Containers {
-    let form_id = format!("comment-form-{file_path}-{line}");
+pub fn add_comment_button_id(file_path: &str, line: &DiffLine) -> String {
+    format!("comment-form-{}-{line}", classify_name(file_path))
+}
+
+#[must_use]
+pub fn classify_name<T: AsRef<str>>(class: T) -> String {
+    let class = class.as_ref();
+    class
+        .to_ascii_lowercase()
+        .replace(|c: char| !c.is_ascii_alphanumeric(), "-")
+}
+
+#[must_use]
+pub fn render_add_comment_button(file_path: &str, line: &DiffLine) -> Containers {
+    let button_id = add_comment_button_id(file_path, line);
+    let size = 18;
 
     container! {
         button
+            id=(button_id)
+            hidden
             type=button
             position=absolute
+            width=(size)
+            height=(size)
             left=0
-            top=0
-            background="transparent"
-            color="#0969da"
-            padding-x=4
-            padding-y=2
+            top=calc(50% - size / 2)
+            align-items=center
+            justify-content=center
+            background=#1f6feb
+            border-radius=3
+            color=white
             cursor=pointer
             font-size=12
             opacity=0.6
-            fx-click=fx { element(form_id).toggle_visibility() }
+            user-select=none
+            fx-click=fx { element(button_id).display() }
         {
             "+"
         }

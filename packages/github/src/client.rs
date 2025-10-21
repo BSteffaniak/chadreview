@@ -2,7 +2,8 @@ use crate::diff_parser::parse_unified_diff;
 use anyhow::Result;
 use chadreview_git_provider::GitProvider;
 use chadreview_pr_models::{
-    Comment, CreateComment, DiffFile, FileStatus, Label, PrState, PullRequest, User,
+    Comment, CommentType, CreateComment, DiffFile, FileStatus, Label, PrState, PullRequest, User,
+    comment::LineNumber,
 };
 use chadreview_syntax::SyntaxHighlighter;
 
@@ -115,8 +116,8 @@ impl GitProvider for GitHubProvider {
         for file_data in &files_data {
             let filename = file_data["filename"].as_str().unwrap();
             let status = parse_file_status(file_data["status"].as_str().unwrap());
-            let additions = usize::try_from(file_data["additions"].as_u64().unwrap())?;
-            let deletions = usize::try_from(file_data["deletions"].as_u64().unwrap())?;
+            let additions = file_data["additions"].as_u64().unwrap();
+            let deletions = file_data["deletions"].as_u64().unwrap();
 
             if let Some(patch_str) = file_data["patch"].as_str() {
                 let parsed = parse_unified_diff(
@@ -140,52 +141,25 @@ impl GitProvider for GitHubProvider {
     }
 
     async fn get_comments(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<Comment>> {
-        let review_comments_url = format!(
-            "{}/repos/{}/{}/pulls/{}/comments",
-            self.base_url, owner, repo, number
-        );
-        log::debug!("GET {review_comments_url}");
-        let mut review_request = self
-            .http_client
-            .get(&review_comments_url)
-            .header("Accept", "application/vnd.github.v3+json");
+        let review_comments = fetch_all_paginated(
+            &self.http_client,
+            &format!(
+                "{}/repos/{owner}/{repo}/pulls/{number}/comments",
+                self.base_url
+            ),
+            self.auth_token.as_ref(),
+        )
+        .await?;
 
-        if let Some(token) = &self.auth_token {
-            review_request = review_request.bearer_auth(token);
-        }
-
-        let review_response = review_request.send().await?;
-        let status = review_response.status();
-
-        if !status.is_success() {
-            log::error!("GitHub API error: {}", review_response.text().await?);
-            anyhow::bail!("GitHub API error: {status}");
-        }
-
-        let review_comments: Vec<serde_json::Value> = review_response.json().await?;
-
-        let issue_comments_url = format!(
-            "{}/repos/{}/{}/issues/{}/comments",
-            self.base_url, owner, repo, number
-        );
-        let mut issue_request = self
-            .http_client
-            .get(&issue_comments_url)
-            .header("Accept", "application/vnd.github.v3+json");
-
-        if let Some(token) = &self.auth_token {
-            issue_request = issue_request.bearer_auth(token);
-        }
-
-        let issue_response = issue_request.send().await?;
-        let status = issue_response.status();
-
-        if !status.is_success() {
-            log::error!("GitHub API error: {}", issue_response.text().await?);
-            anyhow::bail!("GitHub API error: {status}");
-        }
-
-        let issue_comments: Vec<serde_json::Value> = issue_response.json().await?;
+        let issue_comments = fetch_all_paginated(
+            &self.http_client,
+            &format!(
+                "{}/repos/{owner}/{repo}/issues/{number}/comments",
+                self.base_url
+            ),
+            self.auth_token.as_ref(),
+        )
+        .await?;
 
         let mut all_comments_with_reply_info = Vec::new();
 
@@ -203,6 +177,7 @@ impl GitProvider for GitHubProvider {
         Ok(thread_comments(all_comments_with_reply_info))
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn create_comment(
         &self,
         owner: &str,
@@ -210,9 +185,41 @@ impl GitProvider for GitHubProvider {
         number: u64,
         comment: CreateComment,
     ) -> Result<Comment> {
-        use chadreview_pr_models::CommentType;
-
         match &comment.comment_type {
+            CommentType::Reply { in_reply_to } => {
+                let url = format!(
+                    "{}/repos/{}/{}/pulls/{}/comments",
+                    self.base_url, owner, repo, number
+                );
+
+                log::debug!("POST {url}");
+
+                let body = serde_json::json!({
+                    "body": comment.body,
+                    "in_reply_to": in_reply_to,
+                });
+
+                let mut request = self
+                    .http_client
+                    .post(&url)
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .json(&body);
+
+                if let Some(token) = &self.auth_token {
+                    request = request.bearer_auth(token);
+                }
+
+                let response = request.send().await?;
+                let status = response.status();
+
+                if !status.is_success() {
+                    log::error!("GitHub API error: {}", response.text().await?);
+                    anyhow::bail!("GitHub API error: {status}");
+                }
+
+                let comment_data: serde_json::Value = response.json().await?;
+                Ok(parse_review_comment(&comment_data))
+            }
             CommentType::LineLevelComment { path, line } => {
                 let url = format!(
                     "{}/repos/{}/{}/pulls/{}/comments",
@@ -220,15 +227,11 @@ impl GitProvider for GitHubProvider {
                 );
                 log::debug!("POST {url}");
 
-                let mut body = serde_json::json!({
-                    "body": comment.body,
+                let body = serde_json::json!({
+                    "in_reply_to": comment.body,
                     "path": path,
                     "line": line,
                 });
-
-                if let Some(reply_to) = comment.in_reply_to {
-                    body["in_reply_to"] = serde_json::json!(reply_to);
-                }
 
                 let mut request = self
                     .http_client
@@ -258,14 +261,10 @@ impl GitProvider for GitHubProvider {
                 );
                 log::debug!("POST {url}");
 
-                let mut body = serde_json::json!({
+                let body = serde_json::json!({
                     "body": comment.body,
                     "path": path,
                 });
-
-                if let Some(reply_to) = comment.in_reply_to {
-                    body["in_reply_to"] = serde_json::json!(reply_to);
-                }
 
                 let mut request = self
                     .http_client
@@ -323,12 +322,22 @@ impl GitProvider for GitHubProvider {
         }
     }
 
-    async fn update_comment(&self, comment_id: u64, body: String) -> Result<Comment> {
+    async fn update_comment(
+        &self,
+        owner: &str,
+        repo: &str,
+        _number: u64,
+        comment_id: u64,
+        body: String,
+    ) -> Result<Comment> {
         let request_body = serde_json::json!({
             "body": body,
         });
 
-        let review_url = format!("{}/repos/*/pulls/comments/{}", self.base_url, comment_id);
+        let review_url = format!(
+            "{}/repos/{owner}/{repo}/pulls/comments/{}",
+            self.base_url, comment_id
+        );
         log::debug!("PATCH {review_url}");
         let mut review_request = self
             .http_client
@@ -347,7 +356,10 @@ impl GitProvider for GitHubProvider {
             return Ok(parse_review_comment(&comment_data));
         }
 
-        let issue_url = format!("{}/repos/*/issues/comments/{}", self.base_url, comment_id);
+        let issue_url = format!(
+            "{}/repos/{owner}/{repo}/issues/comments/{}",
+            self.base_url, comment_id
+        );
         log::debug!("PATCH {issue_url}");
         let mut issue_request = self
             .http_client
@@ -371,8 +383,17 @@ impl GitProvider for GitHubProvider {
         Ok(parse_issue_comment(&comment_data))
     }
 
-    async fn delete_comment(&self, comment_id: u64) -> Result<()> {
-        let review_url = format!("{}/repos/*/pulls/comments/{}", self.base_url, comment_id);
+    async fn delete_comment(
+        &self,
+        owner: &str,
+        repo: &str,
+        _number: u64,
+        comment_id: u64,
+    ) -> Result<()> {
+        let review_url = format!(
+            "{}/repos/{owner}/{repo}/pulls/comments/{comment_id}",
+            self.base_url
+        );
         log::debug!("DELETE {review_url}");
         let mut review_request = self
             .http_client
@@ -389,7 +410,10 @@ impl GitProvider for GitHubProvider {
             return Ok(());
         }
 
-        let issue_url = format!("{}/repos/*/issues/comments/{}", self.base_url, comment_id);
+        let issue_url = format!(
+            "{}/repos/{owner}/{repo}/issues/comments/{comment_id}",
+            self.base_url
+        );
         log::debug!("DELETE {issue_url}");
         let mut issue_request = self
             .http_client
@@ -503,12 +527,9 @@ fn parse_link_header(header_value: &str) -> LinkHeader {
     result
 }
 
-async fn fetch_all_pr_files(
+async fn fetch_all_paginated(
     http_client: &reqwest::Client,
-    base_url: &str,
-    owner: &str,
-    repo: &str,
-    number: u64,
+    url: &str,
     auth_token: Option<&String>,
 ) -> Result<Vec<serde_json::Value>> {
     const MAX_FILES: usize = 3000;
@@ -517,12 +538,18 @@ async fn fetch_all_pr_files(
     let mut all_files = Vec::new();
     let mut page = 1;
 
-    log::debug!("Fetching PR files for {owner}/{repo} #{number}");
+    let mut url = url.to_string();
+
+    if url.contains('?') {
+        url.push('&');
+    } else {
+        url.push('?');
+    }
+
+    let url = url.as_str();
 
     loop {
-        let url = format!(
-            "{base_url}/repos/{owner}/{repo}/pulls/{number}/files?per_page={PER_PAGE}&page={page}"
-        );
+        let url = format!("{url}per_page={PER_PAGE}&page={page}");
 
         log::debug!("GET {url} (page {page})");
 
@@ -575,7 +602,7 @@ async fn fetch_all_pr_files(
         break;
     }
 
-    log::info!(
+    log::debug!(
         "Fetched total of {} files across {} page(s)",
         all_files.len(),
         page
@@ -584,16 +611,43 @@ async fn fetch_all_pr_files(
     Ok(all_files)
 }
 
+async fn fetch_all_pr_files(
+    http_client: &reqwest::Client,
+    base_url: &str,
+    owner: &str,
+    repo: &str,
+    number: u64,
+    auth_token: Option<&String>,
+) -> Result<Vec<serde_json::Value>> {
+    log::debug!("Fetching PR files for {owner}/{repo} #{number}");
+
+    fetch_all_paginated(
+        http_client,
+        &format!("{base_url}/repos/{owner}/{repo}/pulls/{number}/files"),
+        auth_token,
+    )
+    .await
+}
+
 fn parse_review_comment(value: &serde_json::Value) -> Comment {
     use chadreview_pr_models::CommentType;
 
     let path = value["path"].as_str().unwrap_or("").to_string();
-    let line = value["line"].as_u64().and_then(|l| usize::try_from(l).ok());
+    let line = value["line"].as_u64();
+    let original_line = value["original_line"].as_u64();
+    let side = value["side"].as_str();
 
-    let comment_type = if let Some(line_num) = line {
+    let comment_type = if line.is_none_or(|_| side == Some("LEFT"))
+        && let Some(line) = original_line
+    {
         CommentType::LineLevelComment {
             path,
-            line: line_num,
+            line: LineNumber::Old(line),
+        }
+    } else if let Some(line) = line {
+        CommentType::LineLevelComment {
+            path,
+            line: LineNumber::New(line),
         }
     } else {
         CommentType::FileLevelComment { path }
@@ -673,6 +727,7 @@ fn thread_comments(comments_with_replies: Vec<(Comment, Option<u64>)>) -> Vec<Co
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chadreview_pr_models::comment::LineNumber;
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -858,7 +913,7 @@ mod tests {
         match &comments[0].comment_type {
             chadreview_pr_models::CommentType::LineLevelComment { path, line } => {
                 assert_eq!(path, "src/main.rs");
-                assert_eq!(*line, 42);
+                assert_eq!(*line, LineNumber::New(42));
             }
             _ => panic!("Expected LineLevelComment"),
         }
@@ -1032,9 +1087,8 @@ mod tests {
             body: "New line comment".to_string(),
             comment_type: chadreview_pr_models::CommentType::LineLevelComment {
                 path: "src/main.rs".to_string(),
-                line: 10,
+                line: LineNumber::New(10),
             },
-            in_reply_to: None,
         };
 
         let comment = client
@@ -1048,7 +1102,7 @@ mod tests {
         match &comment.comment_type {
             chadreview_pr_models::CommentType::LineLevelComment { path, line } => {
                 assert_eq!(path, "src/main.rs");
-                assert_eq!(*line, 10);
+                assert_eq!(*line, LineNumber::New(10));
             }
             _ => panic!("Expected LineLevelComment"),
         }
@@ -1084,7 +1138,6 @@ mod tests {
         let create_comment = CreateComment {
             body: "New general comment".to_string(),
             comment_type: chadreview_pr_models::CommentType::General,
-            in_reply_to: None,
         };
 
         let comment = client
@@ -1132,11 +1185,7 @@ mod tests {
 
         let create_comment = CreateComment {
             body: "Reply to comment".to_string(),
-            comment_type: chadreview_pr_models::CommentType::LineLevelComment {
-                path: "src/lib.rs".to_string(),
-                line: 5,
-            },
-            in_reply_to: Some(3001),
+            comment_type: chadreview_pr_models::CommentType::Reply { in_reply_to: 3001 },
         };
 
         let comment = client
@@ -1166,9 +1215,8 @@ mod tests {
             body: "Should fail".to_string(),
             comment_type: chadreview_pr_models::CommentType::LineLevelComment {
                 path: "src/main.rs".to_string(),
-                line: 1,
+                line: LineNumber::New(1),
             },
-            in_reply_to: None,
         };
 
         let result = client
@@ -1199,7 +1247,7 @@ mod tests {
         });
 
         Mock::given(method("PATCH"))
-            .and(path("/repos/*/pulls/comments/6001"))
+            .and(path("/repos/org/repo/pulls/comments/6001"))
             .respond_with(ResponseTemplate::new(200).set_body_json(&updated_comment))
             .mount(&mock_server)
             .await;
@@ -1209,7 +1257,7 @@ mod tests {
             .with_base_url(mock_server.uri());
 
         let comment = client
-            .update_comment(6001, "Updated comment body".to_string())
+            .update_comment("org", "repo", 0, 6001, "Updated comment body".to_string())
             .await
             .unwrap();
 
@@ -1235,13 +1283,13 @@ mod tests {
         });
 
         Mock::given(method("PATCH"))
-            .and(path("/repos/*/pulls/comments/6002"))
+            .and(path("/repos/org/repo/pulls/comments/6002"))
             .respond_with(ResponseTemplate::new(404))
             .mount(&mock_server)
             .await;
 
         Mock::given(method("PATCH"))
-            .and(path("/repos/*/issues/comments/6002"))
+            .and(path("/repos/org/repo/issues/comments/6002"))
             .respond_with(ResponseTemplate::new(200).set_body_json(&updated_comment))
             .mount(&mock_server)
             .await;
@@ -1251,7 +1299,13 @@ mod tests {
             .with_base_url(mock_server.uri());
 
         let comment = client
-            .update_comment(6002, "Updated general comment".to_string())
+            .update_comment(
+                "org",
+                "repo",
+                0,
+                6002,
+                "Updated general comment".to_string(),
+            )
             .await
             .unwrap();
 
@@ -1268,13 +1322,13 @@ mod tests {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("PATCH"))
-            .and(path("/repos/*/pulls/comments/6003"))
+            .and(path("/repos/org/repo/pulls/comments/6003"))
             .respond_with(ResponseTemplate::new(401))
             .mount(&mock_server)
             .await;
 
         Mock::given(method("PATCH"))
-            .and(path("/repos/*/issues/comments/6003"))
+            .and(path("/repos/org/repo/issues/comments/6003"))
             .respond_with(ResponseTemplate::new(401))
             .mount(&mock_server)
             .await;
@@ -1283,7 +1337,9 @@ mod tests {
             .with_token("bad-token".to_string())
             .with_base_url(mock_server.uri());
 
-        let result = client.update_comment(6003, "Should fail".to_string()).await;
+        let result = client
+            .update_comment("owner", "repo", 0, 6003, "Should fail".to_string())
+            .await;
 
         assert!(result.is_err());
     }
@@ -1293,7 +1349,7 @@ mod tests {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("DELETE"))
-            .and(path("/repos/*/pulls/comments/7001"))
+            .and(path("/repos/org/repo/pulls/comments/7001"))
             .respond_with(ResponseTemplate::new(204))
             .mount(&mock_server)
             .await;
@@ -1302,7 +1358,7 @@ mod tests {
             .with_token("test-token".to_string())
             .with_base_url(mock_server.uri());
 
-        let result = client.delete_comment(7001).await;
+        let result = client.delete_comment("org", "repo", 0, 7001).await;
 
         assert!(result.is_ok());
     }
@@ -1312,13 +1368,13 @@ mod tests {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("DELETE"))
-            .and(path("/repos/*/pulls/comments/7002"))
+            .and(path("/repos/org/repo/pulls/comments/7002"))
             .respond_with(ResponseTemplate::new(404))
             .mount(&mock_server)
             .await;
 
         Mock::given(method("DELETE"))
-            .and(path("/repos/*/issues/comments/7002"))
+            .and(path("/repos/org/repo/issues/comments/7002"))
             .respond_with(ResponseTemplate::new(204))
             .mount(&mock_server)
             .await;
@@ -1327,7 +1383,7 @@ mod tests {
             .with_token("test-token".to_string())
             .with_base_url(mock_server.uri());
 
-        let result = client.delete_comment(7002).await;
+        let result = client.delete_comment("org", "repo", 0, 7002).await;
 
         assert!(result.is_ok());
     }
@@ -1337,13 +1393,13 @@ mod tests {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("DELETE"))
-            .and(path("/repos/*/pulls/comments/7003"))
+            .and(path("/repos/org/repo/pulls/comments/7003"))
             .respond_with(ResponseTemplate::new(403))
             .mount(&mock_server)
             .await;
 
         Mock::given(method("DELETE"))
-            .and(path("/repos/*/issues/comments/7003"))
+            .and(path("/repos/org/repo/issues/comments/7003"))
             .respond_with(ResponseTemplate::new(403))
             .mount(&mock_server)
             .await;
@@ -1352,7 +1408,7 @@ mod tests {
             .with_token("bad-token".to_string())
             .with_base_url(mock_server.uri());
 
-        let result = client.delete_comment(7003).await;
+        let result = client.delete_comment("org", "repo", 0, 7003).await;
 
         assert!(result.is_err());
     }

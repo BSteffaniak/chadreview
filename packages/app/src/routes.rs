@@ -19,10 +19,10 @@ pub enum RouteError {
     InvalidPrNumber(#[from] std::num::ParseIntError),
     #[error("Provider error: {0}")]
     Provider(#[from] anyhow::Error),
-    #[error("Missing body")]
-    MissingBody,
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("Invalid body: {0}")]
+    InvalidBody(#[from] hyperchad::router::ParseError),
 }
 
 #[derive(serde::Deserialize)]
@@ -78,11 +78,11 @@ async fn pr_route(
         .query
         .get("repo")
         .ok_or(RouteError::MissingQueryParam("repo"))?;
-    let number_str = req
+    let number = req
         .query
         .get("number")
-        .ok_or(RouteError::MissingQueryParam("number"))?;
-    let number: u64 = number_str.parse()?;
+        .ok_or(RouteError::MissingQueryParam("number"))?
+        .parse::<u64>()?;
 
     let pr = provider.get_pr(owner, repo, number).await?;
     let diffs = provider.get_diff(owner, repo, number).await?;
@@ -107,14 +107,13 @@ async fn create_comment_route(
         .query
         .get("repo")
         .ok_or(RouteError::MissingQueryParam("repo"))?;
-    let number_str = req
+    let number = req
         .query
         .get("number")
-        .ok_or(RouteError::MissingQueryParam("number"))?;
-    let number: u64 = number_str.parse()?;
+        .ok_or(RouteError::MissingQueryParam("number"))?
+        .parse::<u64>()?;
 
-    let body_bytes = req.body.ok_or(RouteError::MissingBody)?;
-    let create_comment: CreateComment = serde_json::from_slice(&body_bytes)?;
+    let create_comment: CreateComment = req.parse_form().map_err(RouteError::InvalidBody)?;
 
     let comment = provider
         .create_comment(owner, repo, number, create_comment)
@@ -131,18 +130,32 @@ async fn update_comment_route(
         return Err(RouteError::UnsupportedMethod);
     }
 
-    let comment_id_str = req
+    let comment_id = req
         .query
         .get("id")
-        .ok_or(RouteError::MissingQueryParam("id"))?;
-    let comment_id: u64 = comment_id_str.parse()?;
+        .ok_or(RouteError::MissingQueryParam("id"))?
+        .parse::<u64>()?;
+    let owner = req
+        .query
+        .get("owner")
+        .ok_or(RouteError::MissingQueryParam("owner"))?;
+    let repo = req
+        .query
+        .get("repo")
+        .ok_or(RouteError::MissingQueryParam("repo"))?;
+    let number = req
+        .query
+        .get("number")
+        .ok_or(RouteError::MissingQueryParam("number"))?
+        .parse::<u64>()?;
 
-    let body_bytes = req.body.ok_or(RouteError::MissingBody)?;
-    let update: UpdateBody = serde_json::from_slice(&body_bytes)?;
+    let update: UpdateBody = req.parse_form().map_err(RouteError::InvalidBody)?;
 
-    let comment = provider.update_comment(comment_id, update.body).await?;
+    let comment = provider
+        .update_comment(owner, repo, number, comment_id, update.body)
+        .await?;
 
-    Ok(render_comment(&comment, "", "", 0))
+    Ok(render_comment(&comment, owner, repo, number))
 }
 
 async fn delete_comment_route(
@@ -153,13 +166,28 @@ async fn delete_comment_route(
         return Err(RouteError::UnsupportedMethod);
     }
 
-    let comment_id_str = req
+    let comment_id = req
         .query
         .get("id")
-        .ok_or(RouteError::MissingQueryParam("id"))?;
-    let comment_id: u64 = comment_id_str.parse()?;
+        .ok_or(RouteError::MissingQueryParam("id"))?
+        .parse::<u64>()?;
+    let owner = req
+        .query
+        .get("owner")
+        .ok_or(RouteError::MissingQueryParam("owner"))?;
+    let repo = req
+        .query
+        .get("repo")
+        .ok_or(RouteError::MissingQueryParam("repo"))?;
+    let number = req
+        .query
+        .get("number")
+        .ok_or(RouteError::MissingQueryParam("number"))?
+        .parse::<u64>()?;
 
-    provider.delete_comment(comment_id).await?;
+    provider
+        .delete_comment(owner, repo, number, comment_id)
+        .await?;
 
     Ok(())
 }

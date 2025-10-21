@@ -26,9 +26,11 @@ path = "src/main.rs"
 [dependencies]
 anyhow = { workspace = true }
 hyperchad = { workspace = true, features = [
+    "actions",
     "app",
     "renderer",
     "router",
+    "router-form",
     "template",
     "transformer",
 ] }
@@ -57,16 +59,25 @@ bitbucket = []
 github    = []
 gitlab    = []
 
-actix         = ["hyperchad/renderer-html-actix"]
-assets        = ["hyperchad/renderer-assets"]
-dev           = ["assets", "static-routes"]
-egui-glow     = ["hyperchad/renderer-egui-glow"]
-egui-wgpu     = ["hyperchad/renderer-egui-wgpu"]
-fltk          = ["hyperchad/renderer-fltk"]
-html          = ["hyperchad/renderer-html"]
-lambda        = ["hyperchad/renderer-html-lambda"]
+actix = ["hyperchad/renderer-html-actix"]
+assets = ["hyperchad/renderer-assets"]
+dev = ["assets", "static-routes"]
+egui-glow = ["hyperchad/renderer-egui-glow"]
+egui-wgpu = ["hyperchad/renderer-egui-wgpu"]
+fltk = ["hyperchad/renderer-fltk"]
+html = ["hyperchad/renderer-html"]
+lambda = ["hyperchad/renderer-html-lambda"]
 static-routes = ["hyperchad/router-static-routes"]
-vanilla-js    = ["html", "hyperchad/renderer-vanilla-js"]
+vanilla-js = [
+    "html",
+    "hyperchad/renderer-vanilla-js",
+    "hyperchad/renderer-vanilla-js-plugin-actions",
+    "hyperchad/renderer-vanilla-js-plugin-event",
+    "hyperchad/renderer-vanilla-js-plugin-form",
+    "hyperchad/renderer-vanilla-js-plugin-idiomorph",
+    "hyperchad/renderer-vanilla-js-plugin-nav",
+    "hyperchad/renderer-vanilla-js-plugin-routing",
+]
 
 fail-on-warnings = []
 
