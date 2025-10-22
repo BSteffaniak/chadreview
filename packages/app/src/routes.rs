@@ -7,7 +7,10 @@ use std::sync::Arc;
 use chadreview_app_ui::comment_thread::{render_comment_item, render_comment_thread};
 use chadreview_git_provider::GitProvider;
 use chadreview_pr_models::CreateComment;
-use hyperchad::router::{Container, RouteRequest, Router};
+use hyperchad::{
+    renderer::Content,
+    router::{Container, RouteRequest, Router},
+};
 use switchy::http::models::Method;
 
 #[derive(Debug, thiserror::Error)]
@@ -54,7 +57,7 @@ pub fn create_router(provider: &Arc<dyn GitProvider>) -> Router {
                 async move { update_comment_route(req, provider).await }
             }
         })
-        .with_no_content_result("/api/comment/delete", {
+        .with_route_result("/api/comment/delete", {
             let provider = provider.clone();
             move |req: RouteRequest| {
                 let provider = provider.clone();
@@ -162,7 +165,7 @@ async fn update_comment_route(
 async fn delete_comment_route(
     req: RouteRequest,
     provider: Arc<dyn GitProvider>,
-) -> Result<(), RouteError> {
+) -> Result<Content, RouteError> {
     if !matches!(req.method, Method::Delete) {
         return Err(RouteError::UnsupportedMethod);
     }
@@ -190,7 +193,7 @@ async fn delete_comment_route(
         .delete_comment(owner, repo, number, comment_id)
         .await?;
 
-    Ok(())
+    Ok(Content::fragments_only().build())
 }
 
 fn render_pr_view(
