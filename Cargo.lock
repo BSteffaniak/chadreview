@@ -3115,7 +3115,7 @@ dependencies = [
 [[package]]
 name = "hyperchad"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "hyperchad_actions",
  "hyperchad_app",
@@ -3135,7 +3135,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_actions"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "hyperchad_color",
  "hyperchad_transformer_models",
@@ -3149,7 +3149,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_app"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "async-trait",
  "clap",
@@ -3173,7 +3173,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_color"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "color-hex",
  "egui",
@@ -3186,7 +3186,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_js_bundler"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "anyhow",
  "log 0.4.28",
@@ -3206,7 +3206,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "async-trait",
  "bytes",
@@ -3219,7 +3219,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_egui"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "async-trait",
  "eframe",
@@ -3244,7 +3244,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_fltk"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "async-trait",
  "bytes",
@@ -3268,7 +3268,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_html"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "async-trait",
  "bytes",
@@ -3295,7 +3295,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_html_actix"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "actix-cors",
  "actix-files",
@@ -3318,7 +3318,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_html_http"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "flume",
  "http 1.3.1",
@@ -3340,7 +3340,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_html_lambda"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "async-trait",
  "bytes",
@@ -3356,7 +3356,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_html_web_server"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "async-trait",
  "bytes",
@@ -3373,7 +3373,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_vanilla_js"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "async-trait",
  "const_format",
@@ -3392,7 +3392,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_vanilla_js_hash"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "const-hex",
  "const_format",
@@ -3402,7 +3402,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_router"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -3428,7 +3428,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_template"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "hyperchad_actions",
  "hyperchad_color",
@@ -3443,7 +3443,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_template_actions_dsl"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "hyperchad_actions",
  "log 0.4.28",
@@ -3455,7 +3455,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_template_macros"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "hyperchad_color",
  "hyperchad_template_actions_dsl",
@@ -3471,7 +3471,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_transformer"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "bumpalo",
  "html-escape",
@@ -3494,7 +3494,7 @@ dependencies = [
 [[package]]
 name = "hyperchad_transformer_models"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "log 0.4.28",
  "moosicbox_assert",
@@ -4314,7 +4314,7 @@ dependencies = [
 [[package]]
 name = "moosicbox_app_native_image"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "bytes",
  "rust-embed",
@@ -4323,7 +4323,7 @@ dependencies = [
 [[package]]
 name = "moosicbox_assert"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "colored",
  "moosicbox_env_utils",
@@ -4332,7 +4332,7 @@ dependencies = [
 [[package]]
 name = "moosicbox_config"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "home",
  "log 0.4.28",
@@ -4343,12 +4343,12 @@ dependencies = [
 [[package]]
 name = "moosicbox_env_utils"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 
 [[package]]
 name = "moosicbox_logging"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "free_log_client",
  "log 0.4.28",
@@ -4360,7 +4360,7 @@ dependencies = [
 [[package]]
 name = "moosicbox_middleware"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "actix-web",
  "futures",
@@ -4374,7 +4374,7 @@ dependencies = [
 [[package]]
 name = "moosicbox_web_server"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "actix-cors",
  "base64 0.22.1",
@@ -4395,7 +4395,7 @@ dependencies = [
 [[package]]
 name = "moosicbox_web_server_core"
 version = "0.1.1"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "moosicbox_assert",
 ]
@@ -4403,7 +4403,7 @@ dependencies = [
 [[package]]
 name = "moosicbox_web_server_cors"
 version = "0.1.1"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "moosicbox_assert",
  "switchy_http_models",
@@ -7078,7 +7078,7 @@ dependencies = [
 [[package]]
 name = "switchy"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "switchy_async",
  "switchy_http",
@@ -7089,7 +7089,7 @@ dependencies = [
 [[package]]
 name = "switchy_async"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "flume",
  "futures",
@@ -7104,7 +7104,7 @@ dependencies = [
 [[package]]
 name = "switchy_env"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "log 0.4.28",
  "thiserror 2.0.17",
@@ -7113,7 +7113,7 @@ dependencies = [
 [[package]]
 name = "switchy_fs"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "log 0.4.28",
  "switchy_async",
@@ -7123,7 +7123,7 @@ dependencies = [
 [[package]]
 name = "switchy_http"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "async-trait",
  "bytes",
@@ -7139,7 +7139,7 @@ dependencies = [
 [[package]]
 name = "switchy_http_models"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "moosicbox_assert",
  "reqwest 0.12.24",
@@ -7150,7 +7150,7 @@ dependencies = [
 [[package]]
 name = "switchy_time"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#beee737a3e554cc37a32a0af833d9fefd340a792"
+source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#a8a6413d05d247c5bbbacd479cf3dbe6f57c3381"
 dependencies = [
  "log 0.4.28",
 ]

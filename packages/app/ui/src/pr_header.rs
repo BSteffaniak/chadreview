@@ -1,6 +1,7 @@
 use chadreview_pr_models::{PrState, PullRequest};
 use hyperchad::router::Container;
 use hyperchad::template::container;
+use hyperchad_template::LayoutOverflow;
 
 #[must_use]
 pub fn render_pr_header(pr: &PullRequest) -> Container {
@@ -80,7 +81,12 @@ fn render_draft_badge(draft: bool) -> Container {
 fn render_metadata(pr: &PullRequest) -> Container {
     container! {
         div border-top="1px solid #d0d7de" padding-top=16 margin-bottom=16 {
-            div direction=row gap=24 margin-bottom=12 {
+            div
+                direction=row
+                gap=24
+                margin-bottom=12
+                overflow-x=(LayoutOverflow::Wrap { grid: false })
+            {
                 div direction=row align-items=center gap=8 {
                     span color="#57606a" font-weight=600 { "Author:" }
                     image src=(pr.author.avatar_url.as_str()) width=32 height=32 border-radius=16 {}
@@ -88,7 +94,11 @@ fn render_metadata(pr: &PullRequest) -> Container {
                         (pr.author.username.as_str())
                     }
                 }
-                div direction=row align-items=center gap=8 {
+                div
+                    direction=row
+                    align-items=center
+                    gap=8
+                {
                     span color="#57606a" font-weight=600 { "Branch:" }
                     span
                         font-family="monospace"

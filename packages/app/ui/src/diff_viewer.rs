@@ -1,7 +1,7 @@
 use chadreview_pr_models::{
     Comment, CommentType, DiffFile, DiffHunk, DiffLine, FileStatus, LineType, comment::LineNumber,
 };
-use hyperchad::template::{Containers, container};
+use hyperchad::template::{Containers, LayoutOverflow, container};
 
 use crate::comment_thread::{
     add_comment_button_id, render_add_comment_button, render_comment_thread,
@@ -87,7 +87,12 @@ fn render_file_header(file: &DiffFile) -> Containers {
                     align-items=center
                     justify-content=space-between
                 {
-                    div direction=row align-items=center gap=12 {
+                    div
+                        direction=row
+                        align-items=center
+                        gap=12
+                        overflow-x=(LayoutOverflow::Wrap { grid: false })
+                    {
                         span
                             padding-y=2
                             padding-x=8
@@ -99,8 +104,17 @@ fn render_file_header(file: &DiffFile) -> Containers {
                         {
                             (status_text)
                         }
-                        span font-family="monospace" font-size=14 font-weight=600 color="#24292f" {
-                            (file.filename.as_str())
+                        div overflow-x=(LayoutOverflow::Wrap { grid: true }) {
+                            span
+                                font-family="monospace"
+                                font-size=14
+                                font-weight=600
+                                color="#24292f"
+                                overflow-x=hidden
+                                text-overflow=ellipsis
+                            {
+                                (file.filename)
+                            }
                         }
                     }
                     (render_file_stats(file))
@@ -155,8 +169,9 @@ fn render_line_row(file_path: &str, line: &DiffLine) -> Containers {
                             user-select=text
                             font-family="monospace"
                             font-size=12
+                            overflow-wrap=anywhere
                         {
-                            (line.highlighted_html.as_str())
+                            (line.highlighted_html)
                         }
                     }
                 }
@@ -236,9 +251,7 @@ fn render_hunk_header_row(hunk: &DiffHunk) -> Containers {
                     user-select=none
                     text-align=start
                 {
-                    (format!("@@ -{},{} +{},{} @@",
-                        hunk.old_start, hunk.old_lines,
-                        hunk.new_start, hunk.new_lines).as_str())
+                    "@@ -"(hunk.old_start)","(hunk.old_lines)" +"(hunk.new_start)","(hunk.new_lines)" @@"
                 }
             }
         }

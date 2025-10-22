@@ -66,6 +66,7 @@ pub fn render_comment_item(owner: &str, repo: &str, number: u64, comment: &Comme
                 color="#24292f"
                 font-size=14
                 white-space=preserve-wrap
+                overflow-wrap=anywhere
             {
                 (comment.body)
             }
