@@ -3,10 +3,14 @@ use chadreview_pr_models::{
 };
 use hyperchad::template::{Containers, container};
 
-use crate::comment_thread;
+use crate::comment_thread::{
+    add_comment_button_id, render_add_comment_button, render_comment_thread,
+    render_create_comment_form,
+};
 
 #[must_use]
 pub fn render(
+    commit_sha: &str,
     diffs: &[DiffFile],
     comments: &[Comment],
     owner: &str,
@@ -27,13 +31,14 @@ pub fn render(
                 "Files changed"
             }
             @for diff_file in diffs {
-                (render_file(diff_file, comments, owner, repo, number))
+                (render_file(commit_sha, diff_file, comments, owner, repo, number))
             }
         }
     }
 }
 
 fn render_file(
+    commit_sha: &str,
     file: &DiffFile,
     comments: &[Comment],
     owner: &str,
@@ -50,7 +55,12 @@ fn render_file(
                     tbody font-family="monospace" font-size=12 {
                         @for line in &hunk.lines {
                             (render_line_row(&file.filename, line))
-                            (render_line_comments(comments, &file.filename, line, owner, repo, number))
+                            tr {
+                                td columns=3 {
+                                    (render_create_comment_form(owner, repo, number, commit_sha, &file.filename, line))
+                                }
+                            }
+                            (render_line_comments(commit_sha, comments, &file.filename, line, owner, repo, number))
                         }
                     }
                 }
@@ -107,7 +117,7 @@ fn render_line_row(file_path: &str, line: &DiffLine) -> Containers {
         LineType::Context => "#ffffff",
     };
 
-    let add_comment_button_id = comment_thread::add_comment_button_id(file_path, line);
+    let add_comment_button_id = add_comment_button_id(file_path, line);
 
     container! {
         tr {
@@ -131,7 +141,7 @@ fn render_line_row(file_path: &str, line: &DiffLine) -> Containers {
                         (render_diff_marker_inline(line))
                     }
 
-                    (comment_thread::render_add_comment_button(file_path, line))
+                    (render_add_comment_button(file_path, line))
 
                     div
                         flex=1
@@ -248,6 +258,7 @@ fn render_file_stats(file: &DiffFile) -> Containers {
 }
 
 fn render_line_comments(
+    commit_sha: &str,
     comments: &[Comment],
     file_path: &str,
     line: &DiffLine,
@@ -263,9 +274,10 @@ fn render_line_comments(
                 CommentType::LineLevelComment {
                     path,
                     line: l,
+                    ..
                 } if path == file_path
-                    && (line.new_line_number.is_some_and(|n| *l == LineNumber::New(n))
-                        || line.old_line_number.is_some_and(|n| *l == LineNumber::Old(n)))
+                    && (line.new_line_number.is_some_and(|n| *l == LineNumber::New { line: n })
+                        || line.old_line_number.is_some_and(|n| *l == LineNumber::Old { line: n }))
             )
         })
         .peekable();
@@ -282,10 +294,10 @@ fn render_line_comments(
                 div padding=8 direction=column gap=8 {
                     div id=(target_id) direction=column gap=8 {
                         @for comment in line_comments {
-                            (comment_thread::render_comment_thread(comment, 0, owner, repo, number))
+                            (render_comment_thread(comment, 0, owner, repo, number))
                         }
                     }
-                    (comment_thread::render_create_comment_form(owner, repo, number, file_path, line))
+                    (render_create_comment_form(owner, repo, number, commit_sha, file_path, line))
                 }
             }
         }
@@ -314,7 +326,7 @@ fn render_file_level_comments(
                 td {
                     div direction=column gap=12 padding=12 background="#f6f8fa" margin-bottom=12 {
                         @for comment in file_comments {
-                            (comment_thread::render_comment_thread(comment, 0, owner, repo, number))
+                            (render_comment_thread(comment, 0, owner, repo, number))
                         }
                     }
                 }

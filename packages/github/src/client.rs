@@ -92,7 +92,7 @@ impl GitProvider for GitHubProvider {
             labels: parse_labels(&pr_data["labels"]),
             assignees: parse_users(&pr_data["assignees"]),
             reviewers: parse_users(&pr_data["requested_reviewers"]),
-            commits: vec![],
+            head_sha: pr_data["head"]["sha"].as_str().unwrap().to_string(),
             created_at: parse_datetime(pr_data["created_at"].as_str().unwrap()),
             updated_at: parse_datetime(pr_data["updated_at"].as_str().unwrap()),
             provider: "github".to_string(),
@@ -192,12 +192,11 @@ impl GitProvider for GitHubProvider {
                     self.base_url, owner, repo, number
                 );
 
-                log::debug!("POST {url}");
-
                 let body = serde_json::json!({
                     "body": comment.body,
                     "in_reply_to": in_reply_to,
                 });
+                log::debug!("POST url={url} body={body:?}");
 
                 let mut request = self
                     .http_client
@@ -220,18 +219,27 @@ impl GitProvider for GitHubProvider {
                 let comment_data: serde_json::Value = response.json().await?;
                 Ok(parse_review_comment(&comment_data))
             }
-            CommentType::LineLevelComment { path, line } => {
+            CommentType::LineLevelComment {
+                commit_sha,
+                path,
+                line,
+            } => {
                 let url = format!(
                     "{}/repos/{}/{}/pulls/{}/comments",
                     self.base_url, owner, repo, number
                 );
-                log::debug!("POST {url}");
 
                 let body = serde_json::json!({
-                    "in_reply_to": comment.body,
+                    "commit_id": commit_sha,
+                    "body": comment.body,
                     "path": path,
-                    "line": line,
+                    "side": match line {
+                        LineNumber::Old { .. } => "LEFT",
+                        LineNumber::New { .. } => "RIGHT",
+                    },
+                    "line": line.number(),
                 });
+                log::debug!("POST url={url} body={body:?}");
 
                 let mut request = self
                     .http_client
@@ -259,12 +267,12 @@ impl GitProvider for GitHubProvider {
                     "{}/repos/{}/{}/pulls/{}/comments",
                     self.base_url, owner, repo, number
                 );
-                log::debug!("POST {url}");
 
                 let body = serde_json::json!({
                     "body": comment.body,
                     "path": path,
                 });
+                log::debug!("POST url={url} body={body:?}");
 
                 let mut request = self
                     .http_client
@@ -632,6 +640,7 @@ async fn fetch_all_pr_files(
 fn parse_review_comment(value: &serde_json::Value) -> Comment {
     use chadreview_pr_models::CommentType;
 
+    let commit_sha = value["commit_id"].as_str().unwrap_or("").to_string();
     let path = value["path"].as_str().unwrap_or("").to_string();
     let line = value["line"].as_u64();
     let original_line = value["original_line"].as_u64();
@@ -641,13 +650,15 @@ fn parse_review_comment(value: &serde_json::Value) -> Comment {
         && let Some(line) = original_line
     {
         CommentType::LineLevelComment {
+            commit_sha,
             path,
-            line: LineNumber::Old(line),
+            line: LineNumber::Old { line },
         }
     } else if let Some(line) = line {
         CommentType::LineLevelComment {
+            commit_sha,
             path,
-            line: LineNumber::New(line),
+            line: LineNumber::New { line },
         }
     } else {
         CommentType::FileLevelComment { path }
@@ -748,7 +759,7 @@ mod tests {
                 "html_url": "https://github.com/testuser"
             },
             "base": { "ref": "main" },
-            "head": { "ref": "feature-branch" },
+            "head": { "ref": "feature-branch", "sha": "1234567890" },
             "labels": [],
             "assignees": [],
             "requested_reviewers": [],
@@ -794,7 +805,7 @@ mod tests {
                 "html_url": "https://github.com/author"
             },
             "base": { "ref": "main" },
-            "head": { "ref": "feature" },
+            "head": { "ref": "feature", "sha": "1234567890" },
             "labels": [],
             "assignees": [],
             "requested_reviewers": [],
@@ -875,6 +886,7 @@ mod tests {
                 "id": 2001,
                 "body": "This needs fixing",
                 "path": "src/main.rs",
+                "commit_id": "1234567890",
                 "line": 42,
                 "user": {
                     "id": 12345,
@@ -911,9 +923,14 @@ mod tests {
         assert_eq!(comments[0].id, 2001);
         assert_eq!(comments[0].body, "This needs fixing");
         match &comments[0].comment_type {
-            chadreview_pr_models::CommentType::LineLevelComment { path, line } => {
+            chadreview_pr_models::CommentType::LineLevelComment {
+                commit_sha,
+                path,
+                line,
+            } => {
+                assert_eq!(commit_sha, "1234567890");
                 assert_eq!(path, "src/main.rs");
-                assert_eq!(*line, LineNumber::New(42));
+                assert_eq!(*line, LineNumber::New { line: 42 });
             }
             _ => panic!("Expected LineLevelComment"),
         }
@@ -928,6 +945,7 @@ mod tests {
                 "id": 3001,
                 "body": "Parent comment",
                 "path": "src/lib.rs",
+                "commit_id": "1234567890",
                 "line": 10,
                 "user": {
                     "id": 12345,
@@ -993,6 +1011,7 @@ mod tests {
                 "id": 4001,
                 "body": "Line comment",
                 "path": "src/main.rs",
+                "commit_id": "1234567890",
                 "line": 5,
                 "user": {
                     "id": 12345,
@@ -1061,6 +1080,7 @@ mod tests {
             "id": 5001,
             "body": "New line comment",
             "path": "src/main.rs",
+            "commit_id": "1234567890",
             "line": 10,
             "user": {
                 "id": 12345,
@@ -1086,8 +1106,9 @@ mod tests {
         let create_comment = CreateComment {
             body: "New line comment".to_string(),
             comment_type: chadreview_pr_models::CommentType::LineLevelComment {
+                commit_sha: "1234567890".to_string(),
                 path: "src/main.rs".to_string(),
-                line: LineNumber::New(10),
+                line: LineNumber::New { line: 10 },
             },
         };
 
@@ -1100,9 +1121,14 @@ mod tests {
         assert_eq!(comment.body, "New line comment");
         assert_eq!(comment.author.username, "commenter");
         match &comment.comment_type {
-            chadreview_pr_models::CommentType::LineLevelComment { path, line } => {
+            chadreview_pr_models::CommentType::LineLevelComment {
+                commit_sha,
+                path,
+                line,
+            } => {
+                assert_eq!(commit_sha, "1234567890");
                 assert_eq!(path, "src/main.rs");
-                assert_eq!(*line, LineNumber::New(10));
+                assert_eq!(*line, LineNumber::New { line: 10 });
             }
             _ => panic!("Expected LineLevelComment"),
         }
@@ -1214,8 +1240,9 @@ mod tests {
         let create_comment = CreateComment {
             body: "Should fail".to_string(),
             comment_type: chadreview_pr_models::CommentType::LineLevelComment {
+                commit_sha: "1234567890".to_string(),
                 path: "src/main.rs".to_string(),
-                line: LineNumber::New(1),
+                line: LineNumber::New { line: 1 },
             },
         };
 

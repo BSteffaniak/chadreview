@@ -1,4 +1,4 @@
-use chadreview_pr_models::{Comment, DiffLine};
+use chadreview_pr_models::{Comment, DiffLine, LineType};
 use hyperchad::template::{Containers, container};
 use hyperchad::transformer::models::SwapTarget;
 
@@ -69,6 +69,7 @@ pub fn render_comment_item(owner: &str, repo: &str, number: u64, comment: &Comme
             {
                 (comment.body)
             }
+            (render_edit_form(owner, repo, number, comment))
             div direction=row gap=12 {
                 (render_reply_button(comment))
                 (render_edit_button(comment))
@@ -83,58 +84,87 @@ fn format_timestamp(dt: &chrono::DateTime<chrono::Utc>) -> String {
 }
 
 #[must_use]
+pub fn comment_form_id(file_path: &str, line: &DiffLine) -> String {
+    format!("comment-form-{}-{line}", classify_name(file_path))
+}
+
+/// # Panics
+///
+/// * If cannot find corresponding line number
+#[must_use]
 pub fn render_create_comment_form(
     owner: &str,
     repo: &str,
     number: u64,
+    commit_sha: &str,
     file_path: &str,
     line: &DiffLine,
 ) -> Containers {
-    let form_id = format!("comment-form-{file_path}-{line}");
-    let target_id = format!("line-{line}-comments");
+    let form_id = comment_form_id(file_path, line);
     let api_url = format!("/api/pr/comment?owner={owner}&repo={repo}&number={number}");
+
+    let (side, line) = match line.line_type {
+        LineType::Addition => (
+            "new",
+            line.new_line_number.expect("Missing new line number"),
+        ),
+        LineType::Deletion => (
+            "old",
+            line.old_line_number.expect("Missing old line number"),
+        ),
+        LineType::Context => (
+            "new",
+            line.new_line_number
+                .or(line.old_line_number)
+                .expect("Missing line number"),
+        ),
+    };
 
     container! {
         form
             id=(form_id)
             hidden
             hx-post=(api_url)
-            hx-swap=(SwapTarget::Id(target_id))
-            padding=12
-            background="#ffffff"
-            border="1px solid #d0d7de"
-            border-radius=6
-            direction=column
-            gap=8
         {
-            input type=hidden name="path" value=(file_path);
-            input type=hidden name="line" value=(line);
-            input type=hidden name="type" value="line_level_comment";
-            textarea name="body" placeholder="Add a comment..." height=80;
-            div direction=row gap=8 {
-                button
-                    type=submit
-                    background="#1a7f37"
-                    color="#ffffff"
-                    padding-x=16
-                    padding-y=8
-                    border-radius=6
-                    font-weight=600
-                    cursor=pointer
-                {
-                    "Comment"
-                }
-                button
-                    type=button
-                    background="transparent"
-                    color="#57606a"
-                    padding-x=16
-                    padding-y=8
-                    border-radius=6
-                    cursor=pointer
-                    fx-click=fx { element(form_id).no_display() }
-                {
-                    "Cancel"
+            div
+                padding=12
+                background="#ffffff"
+                border="1px solid #d0d7de"
+                border-radius=6
+                direction=column
+                gap=8
+            {
+                input type=hidden name="commit_sha" value=(commit_sha);
+                input type=hidden name="path" value=(file_path);
+                input type=hidden name="line" value=(line);
+                input type=hidden name="side" value=(side);
+                input type=hidden name="comment_type" value="line_level_comment";
+                textarea name="body" placeholder="Add a comment..." height=80;
+                div direction=row gap=8 {
+                    button
+                        type=submit
+                        background="#1a7f37"
+                        color="#ffffff"
+                        padding-x=16
+                        padding-y=8
+                        border-radius=6
+                        font-weight=600
+                        cursor=pointer
+                    {
+                        "Comment"
+                    }
+                    button
+                        type=button
+                        background="transparent"
+                        color="#57606a"
+                        padding-x=16
+                        padding-y=8
+                        border-radius=6
+                        cursor=pointer
+                        fx-click=fx { element(form_id).no_display() }
+                    {
+                        "Cancel"
+                    }
                 }
             }
         }
@@ -168,7 +198,7 @@ pub fn render_reply_form(
                 gap=8
             {
                 input type=hidden name="in_reply_to" value=(parent_comment.id);
-                input type=hidden name="type" value="reply";
+                input type=hidden name="comment_type" value="reply";
                 textarea name="body" placeholder="Reply..." height=80;
                 div direction=row gap=8 {
                     button
@@ -326,7 +356,7 @@ pub fn render_delete_button(owner: &str, repo: &str, number: u64, comment: &Comm
 
 #[must_use]
 pub fn add_comment_button_id(file_path: &str, line: &DiffLine) -> String {
-    format!("comment-form-{}-{line}", classify_name(file_path))
+    format!("add-comment-{}-{line}", classify_name(file_path))
 }
 
 #[must_use]
@@ -340,6 +370,7 @@ pub fn classify_name<T: AsRef<str>>(class: T) -> String {
 #[must_use]
 pub fn render_add_comment_button(file_path: &str, line: &DiffLine) -> Containers {
     let button_id = add_comment_button_id(file_path, line);
+    let form_id = comment_form_id(file_path, line);
     let size = 18;
 
     container! {
@@ -361,7 +392,7 @@ pub fn render_add_comment_button(file_path: &str, line: &DiffLine) -> Containers
             font-size=12
             opacity=0.6
             user-select=none
-            fx-click=fx { element(button_id).display() }
+            fx-click=fx { element(form_id).display() }
         {
             "+"
         }

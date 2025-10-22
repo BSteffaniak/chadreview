@@ -205,7 +205,7 @@ fn render_pr_view(
     container! {
         div class="pr-view" {
             (chadreview_app_ui::pr_header::render_pr_header(pr))
-            (chadreview_app_ui::diff_viewer::render(diffs, comments, owner, repo, number))
+            (chadreview_app_ui::diff_viewer::render(&pr.head_sha, diffs, comments, owner, repo, number))
         }
     }
     .into()

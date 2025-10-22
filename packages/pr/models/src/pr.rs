@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::user::{Commit, Label, User};
+use crate::user::{Label, User};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PullRequest {
@@ -18,7 +18,7 @@ pub struct PullRequest {
     pub labels: Vec<Label>,
     pub assignees: Vec<User>,
     pub reviewers: Vec<User>,
-    pub commits: Vec<Commit>,
+    pub head_sha: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub provider: String,

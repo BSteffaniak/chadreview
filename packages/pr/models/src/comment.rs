@@ -15,12 +15,21 @@ pub struct Comment {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "comment_type", rename_all = "snake_case")]
 pub enum CommentType {
     General,
-    FileLevelComment { path: String },
-    LineLevelComment { path: String, line: LineNumber },
-    Reply { in_reply_to: u64 },
+    FileLevelComment {
+        path: String,
+    },
+    LineLevelComment {
+        path: String,
+        commit_sha: String,
+        #[serde(flatten)]
+        line: LineNumber,
+    },
+    Reply {
+        in_reply_to: u64,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,16 +40,26 @@ pub struct CreateComment {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "side", rename_all = "snake_case")]
 pub enum LineNumber {
-    Old(u64),
-    New(u64),
+    Old { line: u64 },
+    New { line: u64 },
+}
+
+impl LineNumber {
+    #[must_use]
+    pub const fn number(&self) -> u64 {
+        match self {
+            Self::Old { line } | Self::New { line } => *line,
+        }
+    }
 }
 
 impl std::fmt::Display for LineNumber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Old(num) => write!(f, "o{num}"),
-            Self::New(num) => write!(f, "n{num}"),
+            Self::Old { line } => write!(f, "o{line}"),
+            Self::New { line } => write!(f, "n{line}"),
         }
     }
 }
