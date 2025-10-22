@@ -32,7 +32,7 @@ fn render_header_main(pr: &PullRequest, draft_badge: &Container) -> Container {
         div margin-bottom=16 {
             div direction=row align-items=center gap=12 margin-bottom=12 {
                 h1 font-size=32 font-weight=600 color="#24292f" margin=0 {
-                    (pr.title.as_str())
+                    (pr.title)
                 }
                 span font-size=32 font-weight=300 color="#57606a" {
                     "#" (pr.number)
@@ -89,9 +89,9 @@ fn render_metadata(pr: &PullRequest) -> Container {
             {
                 div direction=row align-items=center gap=8 {
                     span color="#57606a" font-weight=600 { "Author:" }
-                    image src=(pr.author.avatar_url.as_str()) width=32 height=32 border-radius=16 {}
-                    anchor href=(pr.author.html_url.as_str()) color="#0969da" font-weight=600 {
-                        (pr.author.username.as_str())
+                    image src=(pr.author.avatar_url) width=32 height=32 border-radius=16 {}
+                    anchor href=(pr.author.html_url) color="#0969da" font-weight=600 {
+                        (pr.author.username)
                     }
                 }
                 div
@@ -109,7 +109,7 @@ fn render_metadata(pr: &PullRequest) -> Container {
                         border-radius=6
                         color="#24292f"
                     {
-                        (pr.head_branch.as_str())
+                        (pr.head_branch)
                     }
                     span color="#57606a" { "→" }
                     span
@@ -121,7 +121,7 @@ fn render_metadata(pr: &PullRequest) -> Container {
                         border-radius=6
                         color="#24292f"
                     {
-                        (pr.base_branch.as_str())
+                        (pr.base_branch)
                     }
                 }
             }
@@ -152,7 +152,7 @@ fn render_labels(labels: &[chadreview_pr_models::Label]) -> Container {
                     background=(format!("#{}", label.color))
                     color="#ffffff"
                 {
-                    (label.name.as_str())
+                    (label.name)
                 }
             }
         }
@@ -190,9 +190,9 @@ fn render_assignees(assignees: &[chadreview_pr_models::User]) -> Container {
             span color="#57606a" font-weight=600 { "Assignees:" }
             @for assignee in assignees {
                 div direction=row align-items=center gap=4 {
-                    image src=(assignee.avatar_url.as_str()) width=24 height=24 border-radius=12 {}
-                    anchor href=(assignee.html_url.as_str()) color="#0969da" font-weight=600 {
-                        (assignee.username.as_str())
+                    image src=(assignee.avatar_url) width=24 height=24 border-radius=12 {}
+                    anchor href=(assignee.html_url) color="#0969da" font-weight=600 {
+                        (assignee.username)
                     }
                 }
             }
@@ -211,9 +211,9 @@ fn render_reviewers(reviewers: &[chadreview_pr_models::User]) -> Container {
             span color="#57606a" font-weight=600 { "Reviewers:" }
             @for reviewer in reviewers {
                 div direction=row align-items=center gap=4 {
-                    image src=(reviewer.avatar_url.as_str()) width=24 height=24 border-radius=12 {}
-                    anchor href=(reviewer.html_url.as_str()) color="#0969da" font-weight=600 {
-                        (reviewer.username.as_str())
+                    image src=(reviewer.avatar_url) width=24 height=24 border-radius=12 {}
+                    anchor href=(reviewer.html_url) color="#0969da" font-weight=600 {
+                        (reviewer.username)
                     }
                 }
             }
