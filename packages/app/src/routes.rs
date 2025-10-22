@@ -4,6 +4,7 @@
 
 use std::sync::Arc;
 
+use chadreview_app_ui::comment_thread::{render_comment_item, render_comment_thread};
 use chadreview_git_provider::GitProvider;
 use chadreview_pr_models::CreateComment;
 use hyperchad::router::{Container, RouteRequest, Router};
@@ -119,7 +120,7 @@ async fn create_comment_route(
         .create_comment(owner, repo, number, create_comment)
         .await?;
 
-    Ok(render_comment(&comment, owner, repo, number))
+    Ok(render_comment_thread(&comment, 1, owner, repo, number).into())
 }
 
 async fn update_comment_route(
@@ -155,7 +156,7 @@ async fn update_comment_route(
         .update_comment(owner, repo, number, comment_id, update.body)
         .await?;
 
-    Ok(render_comment(&comment, owner, repo, number))
+    Ok(render_comment_item(owner, repo, number, &comment).into())
 }
 
 async fn delete_comment_route(
@@ -209,13 +210,4 @@ fn render_pr_view(
         }
     }
     .into()
-}
-
-fn render_comment(
-    comment: &chadreview_pr_models::Comment,
-    owner: &str,
-    repo: &str,
-    number: u64,
-) -> Container {
-    chadreview_app_ui::comment_thread::render_comment_thread(comment, 0, owner, repo, number).into()
 }

@@ -3,6 +3,11 @@ use hyperchad::template::{Containers, container};
 use hyperchad::transformer::models::SwapTarget;
 
 #[must_use]
+pub fn comment_id(comment: &Comment) -> String {
+    format!("comment-{}", comment.id)
+}
+
+#[must_use]
 pub fn render_comment_thread(
     comment: &Comment,
     depth: usize,
@@ -23,8 +28,8 @@ pub fn render_comment_thread(
             @for reply in &comment.replies {
                 (render_comment_thread(reply, depth + 1, owner, repo, number))
             }
-            (render_reply_form(comment, owner, repo, number))
         }
+        (render_reply_form(comment, owner, repo, number))
     }
 }
 
@@ -34,6 +39,7 @@ pub fn render_comment_item(owner: &str, repo: &str, number: u64, comment: &Comme
 
     container! {
         div
+            id=(comment_id(comment))
             padding=12
             background="#ffffff"
             border="1px solid #d0d7de"
@@ -180,7 +186,6 @@ pub fn render_reply_form(
     number: u64,
 ) -> Containers {
     let form_id = format!("reply-form-{}", parent_comment.id);
-    let target_id = format!("comment-{}-replies", parent_comment.id);
     let api_url = format!("/api/pr/comment?owner={owner}&repo={repo}&number={number}");
 
     container! {
@@ -188,7 +193,6 @@ pub fn render_reply_form(
             id=(form_id)
             hidden
             hx-post=(api_url)
-            hx-swap=(SwapTarget::Id(target_id))
         {
             div
                 background="#f6f8fa"
