@@ -42,6 +42,26 @@ pub trait GitProvider: Send + Sync {
     /// with their nested reply threads.
     async fn get_comments(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<Comment>>;
 
+    /// Fetches a single comment by ID.
+    ///
+    /// # Arguments
+    /// * `owner` - Repository owner username or organization
+    /// * `repo` - Repository name
+    /// * `number` - Pull request number
+    /// * `comment_id` - Comment ID to fetch
+    /// * `include_replies` - Whether to include nested reply threads
+    ///
+    /// # Returns
+    /// The requested comment, optionally with its nested replies.
+    async fn get_comment(
+        &self,
+        owner: &str,
+        repo: &str,
+        number: u64,
+        comment_id: u64,
+        include_replies: bool,
+    ) -> Result<Comment>;
+
     /// Creates a new comment on a pull request.
     ///
     /// # Arguments

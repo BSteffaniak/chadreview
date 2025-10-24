@@ -177,6 +177,67 @@ impl GitProvider for GitHubProvider {
         Ok(thread_comments(all_comments_with_reply_info))
     }
 
+    async fn get_comment(
+        &self,
+        owner: &str,
+        repo: &str,
+        number: u64,
+        comment_id: u64,
+        include_replies: bool,
+    ) -> Result<Comment> {
+        if include_replies {
+            let all_comments = self.get_comments(owner, repo, number).await?;
+            find_comment_in_tree(&all_comments, comment_id)
+                .ok_or_else(|| anyhow::anyhow!("Comment {comment_id} not found"))
+        } else {
+            let review_url = format!(
+                "{}/repos/{owner}/{repo}/pulls/comments/{comment_id}",
+                self.base_url
+            );
+            log::debug!("GET {review_url}");
+            let mut review_request = self
+                .http_client
+                .get(&review_url)
+                .header("Accept", "application/vnd.github.v3+json");
+
+            if let Some(token) = &self.auth_token {
+                review_request = review_request.bearer_auth(token);
+            }
+
+            let review_response = review_request.send().await?;
+
+            if review_response.status().is_success() {
+                let comment_data: serde_json::Value = review_response.json().await?;
+                return Ok(parse_review_comment(&comment_data));
+            }
+
+            let issue_url = format!(
+                "{}/repos/{owner}/{repo}/issues/comments/{comment_id}",
+                self.base_url
+            );
+            log::debug!("GET {issue_url}");
+            let mut issue_request = self
+                .http_client
+                .get(&issue_url)
+                .header("Accept", "application/vnd.github.v3+json");
+
+            if let Some(token) = &self.auth_token {
+                issue_request = issue_request.bearer_auth(token);
+            }
+
+            let issue_response = issue_request.send().await?;
+            let status = issue_response.status();
+
+            if !status.is_success() {
+                log::error!("GitHub API error: {}", issue_response.text().await?);
+                anyhow::bail!("GitHub API error: {status}");
+            }
+
+            let comment_data: serde_json::Value = issue_response.json().await?;
+            Ok(parse_issue_comment(&comment_data))
+        }
+    }
+
     #[allow(clippy::too_many_lines)]
     async fn create_comment(
         &self,
@@ -733,6 +794,18 @@ fn thread_comments(comments_with_replies: Vec<(Comment, Option<u64>)>) -> Vec<Co
     }
 
     result
+}
+
+fn find_comment_in_tree(comments: &[Comment], comment_id: u64) -> Option<Comment> {
+    for comment in comments {
+        if comment.id == comment_id {
+            return Some(comment.clone());
+        }
+        if let Some(found) = find_comment_in_tree(&comment.replies, comment_id) {
+            return Some(found);
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -1624,5 +1697,204 @@ mod tests {
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].filename, "src/lib.rs");
+    }
+
+    #[tokio::test]
+    async fn test_get_comment_review_without_replies() {
+        let mock_server = MockServer::start().await;
+
+        let comment_response = serde_json::json!({
+            "id": 8001,
+            "body": "This is a review comment",
+            "path": "src/main.rs",
+            "commit_id": "abc123",
+            "line": 42,
+            "user": {
+                "id": 12345,
+                "login": "reviewer",
+                "avatar_url": "https://example.com/avatar.png",
+                "html_url": "https://github.com/reviewer"
+            },
+            "created_at": "2025-01-01T10:00:00Z",
+            "updated_at": "2025-01-01T10:00:00Z",
+            "in_reply_to_id": null
+        });
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/comments/8001"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&comment_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
+
+        let comment = client
+            .get_comment("owner", "repo", 123, 8001, false)
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, 8001);
+        assert_eq!(comment.body, "This is a review comment");
+        assert_eq!(comment.author.username, "reviewer");
+        assert_eq!(comment.replies.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_comment_issue_without_replies() {
+        let mock_server = MockServer::start().await;
+
+        let comment_response = serde_json::json!({
+            "id": 8002,
+            "body": "This is a general comment",
+            "user": {
+                "id": 12345,
+                "login": "commenter",
+                "avatar_url": "https://example.com/avatar.png",
+                "html_url": "https://github.com/commenter"
+            },
+            "created_at": "2025-01-01T10:00:00Z",
+            "updated_at": "2025-01-01T10:00:00Z"
+        });
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/comments/8002"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/issues/comments/8002"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&comment_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
+
+        let comment = client
+            .get_comment("owner", "repo", 123, 8002, false)
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, 8002);
+        assert_eq!(comment.body, "This is a general comment");
+        assert_eq!(comment.author.username, "commenter");
+        assert!(matches!(
+            comment.comment_type,
+            chadreview_pr_models::CommentType::General
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_get_comment_with_replies() {
+        let mock_server = MockServer::start().await;
+
+        let review_comments = serde_json::json!([
+            {
+                "id": 8003,
+                "body": "Parent comment",
+                "path": "src/lib.rs",
+                "commit_id": "abc123",
+                "line": 10,
+                "user": {
+                    "id": 12345,
+                    "login": "reviewer1",
+                    "avatar_url": "https://example.com/avatar1.png",
+                    "html_url": "https://github.com/reviewer1"
+                },
+                "created_at": "2025-01-01T10:00:00Z",
+                "updated_at": "2025-01-01T10:00:00Z",
+                "in_reply_to_id": null
+            },
+            {
+                "id": 8004,
+                "body": "First reply",
+                "path": "src/lib.rs",
+                "line": 10,
+                "user": {
+                    "id": 67890,
+                    "login": "author",
+                    "avatar_url": "https://example.com/avatar2.png",
+                    "html_url": "https://github.com/author"
+                },
+                "created_at": "2025-01-01T11:00:00Z",
+                "updated_at": "2025-01-01T11:00:00Z",
+                "in_reply_to_id": 8003
+            },
+            {
+                "id": 8005,
+                "body": "Second reply",
+                "path": "src/lib.rs",
+                "line": 10,
+                "user": {
+                    "id": 11111,
+                    "login": "reviewer2",
+                    "avatar_url": "https://example.com/avatar3.png",
+                    "html_url": "https://github.com/reviewer2"
+                },
+                "created_at": "2025-01-01T12:00:00Z",
+                "updated_at": "2025-01-01T12:00:00Z",
+                "in_reply_to_id": 8003
+            }
+        ]);
+
+        let issue_comments = serde_json::json!([]);
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/123/comments"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&review_comments))
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/issues/123/comments"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&issue_comments))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
+
+        let comment = client
+            .get_comment("owner", "repo", 123, 8003, true)
+            .await
+            .unwrap();
+
+        assert_eq!(comment.id, 8003);
+        assert_eq!(comment.body, "Parent comment");
+        assert_eq!(comment.replies.len(), 2);
+        assert_eq!(comment.replies[0].id, 8004);
+        assert_eq!(comment.replies[0].body, "First reply");
+        assert_eq!(comment.replies[1].id, 8005);
+        assert_eq!(comment.replies[1].body, "Second reply");
+    }
+
+    #[tokio::test]
+    async fn test_get_comment_not_found() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/pulls/comments/9999"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&mock_server)
+            .await;
+
+        Mock::given(method("GET"))
+            .and(path("/repos/owner/repo/issues/comments/9999"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&mock_server)
+            .await;
+
+        let client = GitHubProvider::new()
+            .with_token("test-token".to_string())
+            .with_base_url(mock_server.uri());
+
+        let result = client.get_comment("owner", "repo", 123, 9999, false).await;
+
+        assert!(result.is_err());
     }
 }
