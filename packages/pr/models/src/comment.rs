@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +30,7 @@ pub enum CommentType {
         line: LineNumber,
     },
     Reply {
+        root_comment_id: u64,
         in_reply_to: u64,
     },
 }
@@ -39,11 +42,38 @@ pub struct CreateComment {
     pub comment_type: CommentType,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "side", rename_all = "snake_case")]
 pub enum LineNumber {
     Old { line: u64 },
     New { line: u64 },
+}
+
+#[derive(thiserror::Error, Debug)]
+pub struct ParseLineNumberError;
+
+impl std::fmt::Display for ParseLineNumberError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Invalid LineNumber")
+    }
+}
+
+impl FromStr for LineNumber {
+    type Err = ParseLineNumberError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(if let Some(s) = s.strip_prefix('n') {
+            Self::New {
+                line: s.parse::<u64>().map_err(|_| ParseLineNumberError)?,
+            }
+        } else if let Some(s) = s.strip_prefix('o') {
+            Self::Old {
+                line: s.parse::<u64>().map_err(|_| ParseLineNumberError)?,
+            }
+        } else {
+            return Err(ParseLineNumberError);
+        })
+    }
 }
 
 impl LineNumber {

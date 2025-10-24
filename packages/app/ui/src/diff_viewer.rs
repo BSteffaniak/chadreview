@@ -57,10 +57,25 @@ fn render_file(
                             (render_line_row(&file.filename, line))
                             tr {
                                 td columns=3 {
-                                    (render_create_comment_form(owner, repo, number, commit_sha, &file.filename, line))
+                                    @let line_number = line.into();
+                                    @let line_comments = comments
+                                        .iter()
+                                        .filter(|c| {
+                                            matches!(
+                                                &c.comment_type,
+                                                CommentType::LineLevelComment {
+                                                    path,
+                                                    line: l,
+                                                    ..
+                                                } if path == &file.filename
+                                                    && (line.new_line_number.is_some_and(|n| *l == LineNumber::New { line: n })
+                                                        || line.old_line_number.is_some_and(|n| *l == LineNumber::Old { line: n }))
+                                            )
+                                        });
+                                    (render_line_comments(commit_sha, line_comments, &file.filename, line_number, owner, repo, number))
+                                    (render_create_comment_form(owner, repo, number, commit_sha, &file.filename, line_number))
                                 }
                             }
-                            (render_line_comments(commit_sha, comments, &file.filename, line, owner, repo, number))
                         }
                     }
                 }
@@ -124,8 +139,9 @@ fn render_file_header(file: &DiffFile) -> Containers {
     }
 }
 
-fn render_line_row(file_path: &str, line: &DiffLine) -> Containers {
-    let bg_color = match line.line_type {
+fn render_line_row(file_path: &str, diff_line: &DiffLine) -> Containers {
+    let line = diff_line.into();
+    let bg_color = match diff_line.line_type {
         LineType::Addition => "#e6ffec",
         LineType::Deletion => "#ffebe9",
         LineType::Context => "#ffffff",
@@ -135,7 +151,7 @@ fn render_line_row(file_path: &str, line: &DiffLine) -> Containers {
 
     container! {
         tr {
-            (render_line_numbers_inline(line))
+            (render_line_numbers_inline(diff_line))
 
             td {
                 div
@@ -152,7 +168,7 @@ fn render_line_row(file_path: &str, line: &DiffLine) -> Containers {
                         justify-content=center
                         align-items=center
                     {
-                        (render_diff_marker_inline(line))
+                        (render_diff_marker_inline(diff_line))
                     }
 
                     (render_add_comment_button(file_path, line))
@@ -171,7 +187,7 @@ fn render_line_row(file_path: &str, line: &DiffLine) -> Containers {
                             font-size=12
                             overflow-wrap=anywhere
                         {
-                            (line.highlighted_html)
+                            (diff_line.highlighted_html)
                         }
                     }
                 }
@@ -270,48 +286,34 @@ fn render_file_stats(file: &DiffFile) -> Containers {
     }
 }
 
-fn render_line_comments(
+#[must_use]
+pub fn comment_thread_container_id(comment_id: u64) -> String {
+    format!("comment-thread-{comment_id}-container")
+}
+
+#[must_use]
+pub fn render_line_comments<'a>(
     commit_sha: &str,
-    comments: &[Comment],
+    comments: impl Iterator<Item = &'a Comment>,
     file_path: &str,
-    line: &DiffLine,
+    line: LineNumber,
     owner: &str,
     repo: &str,
     number: u64,
 ) -> Containers {
-    let mut line_comments = comments
-        .iter()
-        .filter(|c| {
-            matches!(
-                &c.comment_type,
-                CommentType::LineLevelComment {
-                    path,
-                    line: l,
-                    ..
-                } if path == file_path
-                    && (line.new_line_number.is_some_and(|n| *l == LineNumber::New { line: n })
-                        || line.old_line_number.is_some_and(|n| *l == LineNumber::Old { line: n }))
-            )
-        })
-        .peekable();
+    let mut line_comments = comments.peekable();
 
-    if line_comments.peek().is_none() {
+    let Some(root_comment) = line_comments.peek() else {
         return vec![];
-    }
-
-    let target_id = format!("line-{line}-comments");
+    };
 
     container! {
-        tr {
-            td columns=3 {
-                div padding=8 direction=column gap=8 {
-                    div id=(target_id) direction=column gap=8 {
-                        @for comment in line_comments {
-                            (render_comment_thread(comment, 0, owner, repo, number))
-                        }
-                    }
-                    (render_create_comment_form(owner, repo, number, commit_sha, file_path, line))
+        div id=(comment_thread_container_id(root_comment.id)) padding=8 direction=column gap=8 {
+            div direction=column gap=8 {
+                @for comment in line_comments {
+                    (render_comment_thread(comment.id, comment, 0, owner, repo, number))
                 }
+                (render_create_comment_form(owner, repo, number, commit_sha, file_path, line))
             }
         }
     }
@@ -339,7 +341,7 @@ fn render_file_level_comments(
                 td {
                     div direction=column gap=12 padding=12 background="#f6f8fa" margin-bottom=12 {
                         @for comment in file_comments {
-                            (render_comment_thread(comment, 0, owner, repo, number))
+                            (render_comment_thread(comment.id, comment, 0, owner, repo, number))
                         }
                     }
                 }

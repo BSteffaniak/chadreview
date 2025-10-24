@@ -4,13 +4,22 @@
 
 use std::sync::Arc;
 
-use chadreview_app_ui::comment_thread::{render_comment_item, render_comment_thread};
+use chadreview_app_ui::{
+    comment_thread::{
+        comment_thread_id, render_comment_item, render_comment_thread, render_reply_form,
+    },
+    diff_viewer::render_line_comments,
+};
 use chadreview_git_provider::GitProvider;
-use chadreview_pr_models::CreateComment;
+use chadreview_pr_models::{
+    CommentType, CreateComment,
+    comment::{LineNumber, ParseLineNumberError},
+};
 use hyperchad::{
     renderer::Content,
     router::{Container, RouteRequest, Router},
 };
+use hyperchad_template::{Selector, container};
 use switchy::http::models::Method;
 
 #[derive(Debug, thiserror::Error)]
@@ -19,6 +28,10 @@ pub enum RouteError {
     MissingQueryParam(&'static str),
     #[error("Unsupported method")]
     UnsupportedMethod,
+    #[error("Invalid LineNumber")]
+    InvalidLineNumber(#[from] ParseLineNumberError),
+    #[error("Invalid bool")]
+    InvalidBool(#[from] std::str::ParseBoolError),
     #[error("Invalid PR number")]
     InvalidPrNumber(#[from] std::num::ParseIntError),
     #[error("Provider error: {0}")]
@@ -98,7 +111,7 @@ async fn pr_route(
 async fn create_comment_route(
     req: RouteRequest,
     provider: Arc<dyn GitProvider>,
-) -> Result<Container, RouteError> {
+) -> Result<Content, RouteError> {
     if !matches!(req.method, Method::Post) {
         return Err(RouteError::UnsupportedMethod);
     }
@@ -118,12 +131,60 @@ async fn create_comment_route(
         .parse::<u64>()?;
 
     let create_comment: CreateComment = req.parse_form().map_err(RouteError::InvalidBody)?;
+    let comment_type = create_comment.comment_type.clone();
 
     let comment = provider
         .create_comment(owner, repo, number, create_comment)
         .await?;
 
-    Ok(render_comment_thread(&comment, 1, owner, repo, number).into())
+    let mut content = Content::builder();
+
+    match comment_type {
+        CommentType::General | CommentType::FileLevelComment { .. } | CommentType::Reply { .. } => {
+            if let CommentType::Reply {
+                root_comment_id,
+                in_reply_to,
+            } = &comment_type
+            {
+                content.primary(render_comment_thread(
+                    *root_comment_id,
+                    &comment,
+                    1,
+                    owner,
+                    repo,
+                    number,
+                ));
+                content.fragment(render_reply_form(
+                    *root_comment_id,
+                    *in_reply_to,
+                    owner,
+                    repo,
+                    number,
+                ));
+            } else {
+                content.primary(render_comment_thread(
+                    comment.id, &comment, 0, owner, repo, number,
+                ));
+            }
+        }
+        CommentType::LineLevelComment {
+            path,
+            commit_sha,
+            line,
+        } => {
+            content.primary(render_line_comments(
+                &commit_sha,
+                std::iter::once(&comment),
+                &path,
+                line,
+                owner,
+                repo,
+                number,
+            ));
+        }
+    }
+
+    Ok(content.build())
 }
 
 async fn update_comment_route(
@@ -152,6 +213,12 @@ async fn update_comment_route(
         .get("number")
         .ok_or(RouteError::MissingQueryParam("number"))?
         .parse::<u64>()?;
+    let root = req
+        .query
+        .get("root")
+        .map(|s| s.parse::<bool>())
+        .transpose()?
+        .unwrap_or(false);
 
     let update: UpdateBody = req.parse_form().map_err(RouteError::InvalidBody)?;
 
@@ -159,7 +226,7 @@ async fn update_comment_route(
         .update_comment(owner, repo, number, comment_id, update.body)
         .await?;
 
-    Ok(render_comment_item(owner, repo, number, &comment).into())
+    Ok(render_comment_item(&comment, root, owner, repo, number).into())
 }
 
 async fn delete_comment_route(
@@ -188,12 +255,57 @@ async fn delete_comment_route(
         .get("number")
         .ok_or(RouteError::MissingQueryParam("number"))?
         .parse::<u64>()?;
+    let root = req
+        .query
+        .get("root")
+        .map(|s| s.parse::<bool>())
+        .transpose()?
+        .unwrap_or(false);
+
+    let mut response = Content::builder();
+
+    if root {
+        let path = req
+            .query
+            .get("path")
+            .ok_or(RouteError::MissingQueryParam("path"))?;
+        let line = req
+            .query
+            .get("line")
+            .ok_or(RouteError::MissingQueryParam("line"))?
+            .parse::<LineNumber>()?;
+        let commit_sha = req
+            .query
+            .get("commit_sha")
+            .ok_or(RouteError::MissingQueryParam("commit_sha"))?;
+
+        let mut comment = provider
+            .get_comment(owner, repo, number, comment_id, true)
+            .await?;
+
+        if !comment.replies.is_empty() {
+            let mut root = comment.replies.remove(0);
+            root.replies = comment.replies.drain(..).collect();
+
+            response.primary(render_line_comments(
+                commit_sha,
+                std::iter::once(&root),
+                path,
+                line,
+                owner,
+                repo,
+                number,
+            ));
+        }
+    }
+
+    response.delete_selector(Selector::Id(comment_thread_id(comment_id)));
 
     provider
         .delete_comment(owner, repo, number, comment_id)
         .await?;
 
-    Ok(Content::fragments_only().build())
+    Ok(response.build())
 }
 
 fn render_pr_view(

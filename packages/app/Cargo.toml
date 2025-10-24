@@ -74,6 +74,7 @@ vanilla-js = [
     "hyperchad/renderer-vanilla-js-plugin-actions",
     "hyperchad/renderer-vanilla-js-plugin-event",
     "hyperchad/renderer-vanilla-js-plugin-form",
+    "hyperchad/renderer-vanilla-js-plugin-http-events",
     "hyperchad/renderer-vanilla-js-plugin-idiomorph",
     "hyperchad/renderer-vanilla-js-plugin-nav",
     "hyperchad/renderer-vanilla-js-plugin-routing",

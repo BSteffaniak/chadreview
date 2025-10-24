@@ -247,7 +247,7 @@ impl GitProvider for GitHubProvider {
         comment: CreateComment,
     ) -> Result<Comment> {
         match &comment.comment_type {
-            CommentType::Reply { in_reply_to } => {
+            CommentType::Reply { in_reply_to, .. } => {
                 let url = format!(
                     "{}/repos/{}/{}/pulls/{}/comments",
                     self.base_url, owner, repo, number
@@ -1284,7 +1284,10 @@ mod tests {
 
         let create_comment = CreateComment {
             body: "Reply to comment".to_string(),
-            comment_type: chadreview_pr_models::CommentType::Reply { in_reply_to: 3001 },
+            comment_type: chadreview_pr_models::CommentType::Reply {
+                root_comment_id: 2000,
+                in_reply_to: 3001,
+            },
         };
 
         let comment = client

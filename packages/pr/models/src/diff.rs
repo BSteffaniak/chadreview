@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::comment::LineNumber;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiffFile {
     pub filename: String,
@@ -59,4 +61,23 @@ pub enum LineType {
     Addition,
     Deletion,
     Context,
+}
+
+impl From<&DiffLine> for LineNumber {
+    fn from(line: &DiffLine) -> Self {
+        match line.line_type {
+            LineType::Addition => Self::New {
+                line: line.new_line_number.expect("Missing new line number"),
+            },
+            LineType::Deletion => Self::Old {
+                line: line.old_line_number.expect("Missing old line number"),
+            },
+            LineType::Context => Self::Old {
+                line: line
+                    .old_line_number
+                    .or(line.new_line_number)
+                    .expect("Missing line number"),
+            },
+        }
+    }
 }

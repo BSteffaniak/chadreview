@@ -48,6 +48,7 @@ serde_json = { version = "1", default-features = false }
 syntect = { version = "5", default-features = false }
 thiserror = { version = "1", default-features = false }
 tokio = { version = "1", default-features = false }
+urlencoding = { version = "2.1.3", default-features = false }
 
 hyperchad             = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
 hyperchad_template    = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
