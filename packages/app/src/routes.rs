@@ -9,6 +9,7 @@ use chadreview_app_ui::{
         comment_thread_id, render_comment_item, render_comment_thread, render_reply_form,
     },
     diff_viewer::render_line_comments,
+    general_comments,
 };
 use chadreview_git_provider::GitProvider;
 use chadreview_pr_models::{
@@ -321,6 +322,7 @@ fn render_pr_view(
     container! {
         div class="pr-view" {
             (chadreview_app_ui::pr_header::render_pr_header(pr))
+            (general_comments::render_general_comments_section(comments, owner, repo, number))
             (chadreview_app_ui::diff_viewer::render(&pr.head_sha, diffs, comments, owner, repo, number))
         }
     }

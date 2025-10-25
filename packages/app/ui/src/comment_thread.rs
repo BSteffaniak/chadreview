@@ -40,7 +40,7 @@ pub fn render_comment_thread(
             padding-left=12
             gap=12
         {
-            (render_comment_item(comment, depth == 0, owner, repo, number))
+            (render_comment_item(comment, root_comment_id == comment.id, owner, repo, number))
             (render_reply_form(root_comment_id, comment.id, owner, repo, number))
             @for reply in &comment.replies {
                 (render_comment_thread(root_comment_id, reply, depth + 1, owner, repo, number))

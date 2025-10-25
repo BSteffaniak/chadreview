@@ -4,4 +4,5 @@
 
 pub mod comment_thread;
 pub mod diff_viewer;
+pub mod general_comments;
 pub mod pr_header;
