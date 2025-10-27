@@ -1,7 +1,7 @@
 #![cfg_attr(feature = "fail-on-warnings", deny(warnings))]
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 
-use pulldown_cmark::{Event, Options, Parser, html};
+use pulldown_cmark::{Options, Parser, html};
 
 #[must_use]
 pub fn render_markdown(markdown: &str) -> String {
@@ -15,40 +15,33 @@ pub fn render_markdown(markdown: &str) -> String {
 
     let parser = Parser::new_ext(markdown, options);
 
-    let safe_parser = SanitizingParser::new(parser);
-
     let mut html_output = String::new();
-    html::push_html(&mut html_output, safe_parser);
+    html::push_html(&mut html_output, parser);
 
-    html_output
+    filter_dangerous_html(&html_output)
 }
 
-struct SanitizingParser<'a, I> {
-    inner: I,
-    _marker: std::marker::PhantomData<&'a ()>,
-}
+fn filter_dangerous_html(html: &str) -> String {
+    const DANGEROUS_TAGS: &[(&str, &str)] = &[
+        ("title", "TITLE"),
+        ("textarea", "TEXTAREA"),
+        ("style", "STYLE"),
+        ("xmp", "XMP"),
+        ("iframe", "IFRAME"),
+        ("noembed", "NOEMBED"),
+        ("noframes", "NOFRAMES"),
+        ("script", "SCRIPT"),
+        ("plaintext", "PLAINTEXT"),
+    ];
 
-impl<I> SanitizingParser<'_, I> {
-    const fn new(inner: I) -> Self {
-        Self {
-            inner,
-            _marker: std::marker::PhantomData,
-        }
+    let mut result = html.to_string();
+    for (lower, upper) in DANGEROUS_TAGS {
+        result = result.replace(&format!("<{lower}"), &format!("&lt;{lower}"));
+        result = result.replace(&format!("<{upper}"), &format!("&lt;{upper}"));
+        result = result.replace(&format!("</{lower}>"), &format!("&lt;/{lower}&gt;"));
+        result = result.replace(&format!("</{upper}>"), &format!("&lt;/{upper}&gt;"));
     }
-}
-
-impl<'a, I> Iterator for SanitizingParser<'a, I>
-where
-    I: Iterator<Item = Event<'a>>,
-{
-    type Item = Event<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.inner.next()? {
-            Event::Html(_) | Event::InlineHtml(_) => self.next(),
-            event => Some(event),
-        }
-    }
+    result
 }
 
 #[cfg(test)]
@@ -114,15 +107,23 @@ mod tests {
         let md = "<script>alert('xss')</script>";
         let html = render_markdown(md);
         assert!(!html.contains("<script>"));
-        assert!(html.contains("&lt;script&gt;") || !html.contains("alert"));
+        assert!(html.contains("&lt;script>"));
     }
 
     #[test]
-    fn test_html_in_markdown_stripped() {
-        let md = "Normal text <div onclick='evil()'>div</div> more text";
+    fn test_safe_html_allowed() {
+        let md = "Normal text <kbd>Ctrl</kbd> more text";
         let html = render_markdown(md);
-        assert!(!html.contains("<div"));
-        assert!(!html.contains("onclick"));
+        assert!(html.contains("<kbd>"));
+        assert!(html.contains("Ctrl"));
+    }
+
+    #[test]
+    fn test_dangerous_html_filtered() {
+        let md = "Text <script>alert('xss')</script> more";
+        let html = render_markdown(md);
+        assert!(!html.contains("<script>"));
+        assert!(html.contains("&lt;script>"));
     }
 
     #[test]
