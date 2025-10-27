@@ -41,6 +41,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_router(router)
         .with_runtime_handle(handle);
 
+    #[cfg(feature = "html")]
+    {
+        builder = builder
+            .with_css_url("https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.css")
+            .with_inline_css(
+                r"
+                .markdown-body {
+                    --fgColor-default: #24292f;
+                    --fgColor-muted: #57606a;
+                    --fgColor-accent: #0969da;
+                    --fgColor-success: #1a7f37;
+                    --fgColor-danger: #cf222e;
+                    --bgColor-default: transparent;
+                    --bgColor-muted: #f6f8fa;
+                    --bgColor-neutral-muted: #818b981f;
+                    --borderColor-default: #d0d7de;
+                    --borderColor-muted: #d0d7deb3;
+                    --borderColor-accent-emphasis: #0969da;
+                    --borderColor-success-emphasis: #1a7f37;
+                    --borderColor-danger-emphasis: #cf222e;
+                }
+                ",
+            );
+    }
+
     #[cfg(feature = "assets")]
     for asset in chadreview_app::assets::ASSETS.iter().cloned() {
         log::trace!("chadreview_app: adding static asset route: {asset:?}");
