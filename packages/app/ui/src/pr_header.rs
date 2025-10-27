@@ -1,5 +1,5 @@
-use chadreview_markdown::render_markdown;
 use chadreview_pr_models::{PrState, PullRequest};
+use hyperchad::markdown::markdown_to_container;
 use hyperchad::router::Container;
 use hyperchad::template::container;
 use hyperchad_template::LayoutOverflow;
@@ -229,8 +229,8 @@ fn render_description(description: &str) -> Container {
             h3 font-size=16 font-weight=600 color="#24292f" margin-bottom=12 {
                 "Description"
             }
-            div class="markdown-body" color="#24292f" {
-                (render_markdown(description))
+            div color="#24292f" {
+                (markdown_to_container(description))
             }
         }
     }

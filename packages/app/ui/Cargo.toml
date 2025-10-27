@@ -11,11 +11,13 @@ repository  = { workspace = true }
 version     = { workspace = true }
 
 [dependencies]
-chadreview_markdown = { workspace = true }
 chadreview_pr_models = { workspace = true }
 chrono = { workspace = true }
 hyperchad = { workspace = true, features = [
     "logic",
+    "markdown",
+    "markdown-emoji",
+    "markdown-xss-protection",
     "router",
     "template",
     "transformer",
