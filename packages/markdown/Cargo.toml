@@ -1,0 +1,17 @@
+[package]
+authors.workspace    = true
+categories           = ["text-processing"]
+description          = "Markdown to HTML rendering with GitHub Flavored Markdown support"
+edition.workspace    = true
+keywords             = ["gfm", "html", "markdown"]
+license.workspace    = true
+name                 = "chadreview_markdown"
+repository.workspace = true
+version.workspace    = true
+
+[dependencies]
+pulldown-cmark = { workspace = true, features = ["html"] }
+
+[features]
+default          = []
+fail-on-warnings = []

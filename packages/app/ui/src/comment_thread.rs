@@ -1,3 +1,4 @@
+use chadreview_markdown::render_markdown;
 use chadreview_pr_models::comment::LineNumber;
 use chadreview_pr_models::{Comment, CommentType};
 use hyperchad::template::{Containers, container};
@@ -92,12 +93,11 @@ pub fn render_comment_item(
             }
             div
                 id=(format!("comment-{}-body", comment.id))
+                class="markdown-body"
                 color="#24292f"
                 font-size=14
-                white-space=preserve-wrap
-                overflow-wrap=anywhere
             {
-                (comment.body)
+                (render_markdown(&comment.body))
             }
             (render_edit_form(comment, root, owner, repo, number))
             div direction=row gap=12 {
