@@ -40,6 +40,7 @@ chadreview_syntax       = { path = "packages/syntax", version = "0.1.0", default
 anyhow = { version = "1", default-features = false }
 async-trait = { version = "0.1", default-features = false }
 chrono = { version = "0.4", default-features = false }
+gh-emoji = { version = "1.0.8", default-features = false }
 log = { version = "0.4.28", default-features = false, features = [
     "release_max_level_trace",
 ] }

@@ -10,6 +10,7 @@ repository.workspace = true
 version.workspace    = true
 
 [dependencies]
+gh-emoji       = { workspace = true }
 pulldown-cmark = { workspace = true, features = ["html"] }
 
 [features]

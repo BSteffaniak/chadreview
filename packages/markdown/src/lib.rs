@@ -1,6 +1,7 @@
 #![cfg_attr(feature = "fail-on-warnings", deny(warnings))]
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 
+use gh_emoji::Replacer;
 use pulldown_cmark::{Options, Parser, html};
 
 #[must_use]
@@ -13,7 +14,10 @@ pub fn render_markdown(markdown: &str) -> String {
     options.insert(Options::ENABLE_FOOTNOTES);
     options.insert(Options::ENABLE_SMART_PUNCTUATION);
 
-    let parser = Parser::new_ext(markdown, options);
+    let replacer = Replacer::new();
+    let markdown_with_emoji = replacer.replace_all(markdown);
+
+    let parser = Parser::new_ext(&markdown_with_emoji, options);
 
     let mut html_output = String::new();
     html::push_html(&mut html_output, parser);
@@ -148,5 +152,30 @@ mod tests {
     fn test_empty_string() {
         let html = render_markdown("");
         assert_eq!(html, "");
+    }
+
+    #[test]
+    fn test_emoji_shortcodes() {
+        let md = ":white_check_mark: Done! :loudspeaker: Announcement";
+        let html = render_markdown(md);
+        assert!(html.contains("✅"));
+        assert!(html.contains("📢"));
+        assert!(!html.contains(":white_check_mark:"));
+        assert!(!html.contains(":loudspeaker:"));
+    }
+
+    #[test]
+    fn test_emoji_with_markdown() {
+        let md = "**Status:** :rocket: Deployed!";
+        let html = render_markdown(md);
+        assert!(html.contains("<strong>Status:</strong>"));
+        assert!(html.contains("🚀"));
+    }
+
+    #[test]
+    fn test_invalid_emoji_shortcode() {
+        let md = "This :not_a_real_emoji: should stay";
+        let html = render_markdown(md);
+        assert!(html.contains(":not_a_real_emoji:"));
     }
 }
