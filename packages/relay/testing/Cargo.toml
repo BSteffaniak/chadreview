@@ -1,0 +1,30 @@
+[package]
+authors.workspace    = true
+categories           = ["development-tools::testing"]
+description          = "Testing utilities and CLI for sending mock GitHub webhook events to ChadReview relay server"
+edition.workspace    = true
+keywords             = ["github", "mock", "testing", "webhooks"]
+license.workspace    = true
+name                 = "chadreview_relay_testing"
+repository.workspace = true
+version.workspace    = true
+
+[dependencies]
+chadreview_relay_models = { workspace = true }
+
+anyhow     = { workspace = true, features = ["std"] }
+chrono     = { workspace = true, features = ["clock", "serde", "std"] }
+clap       = { workspace = true, features = ["derive"] }
+hex        = { workspace = true, features = ["std"] }
+hmac       = { workspace = true }
+reqwest    = { workspace = true, features = ["json"] }
+serde_json = { workspace = true, features = ["std"] }
+sha2       = { workspace = true }
+tokio      = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "chadreview-relay-test"
+path = "src/main.rs"

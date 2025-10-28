@@ -12,6 +12,7 @@ members = [
     "packages/relay/client",
     "packages/relay/models",
     "packages/relay/server",
+    "packages/relay/testing",
     "packages/state",
     "packages/syntax",
 ]
@@ -43,6 +44,7 @@ chadreview_pr_models           = { path = "packages/pr/models", version = "0.1.0
 chadreview_relay_client        = { path = "packages/relay/client", version = "0.1.0", default-features = false }
 chadreview_relay_models        = { path = "packages/relay/models", version = "0.1.0", default-features = false }
 chadreview_relay_server        = { path = "packages/relay/server", version = "0.1.0", default-features = false }
+chadreview_relay_testing       = { path = "packages/relay/testing", version = "0.1.0", default-features = false }
 chadreview_state               = { path = "packages/state", version = "0.1.0", default-features = false }
 chadreview_syntax              = { path = "packages/syntax", version = "0.1.0", default-features = false }
 
@@ -51,6 +53,7 @@ actix-ws = { version = "0.3.0", default-features = false }
 anyhow = { version = "1", default-features = false }
 async-trait = { version = "0.1", default-features = false }
 chrono = { version = "0.4", default-features = false }
+clap = { version = "4.5.23", default-features = false, features = ["std"] }
 dirs = { version = "6.0.0", default-features = false }
 env_logger = { version = "0.11.8", default-features = false }
 futures = { version = "0.3.31", default-features = false }
