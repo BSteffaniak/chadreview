@@ -1,0 +1,38 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "Relay server for ChadReview webhook propagation"
+edition     = { workspace = true }
+keywords    = ["relay", "server", "webhook"]
+license     = { workspace = true }
+name        = "chadreview_relay_server"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[[bin]]
+name = "relay-server"
+path = "src/main.rs"
+
+[dependencies]
+actix-web               = { workspace = true, features = ["macros", "rustls"] }
+actix-ws                = { workspace = true }
+chadreview_relay_models = { workspace = true }
+env_logger              = { workspace = true }
+futures                 = { workspace = true }
+hex                     = { workspace = true, features = ["std"] }
+hmac                    = { workspace = true }
+log                     = { workspace = true }
+serde_json              = { workspace = true, features = ["std"] }
+sha2                    = { workspace = true }
+tokio                   = { workspace = true, features = ["full"] }
+
+[dev-dependencies]
+chrono = { workspace = true }
+
+[features]
+default          = []
+fail-on-warnings = ["chadreview_relay_models/fail-on-warnings"]
+
+[lints]
+workspace = true

@@ -1,0 +1,29 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "WebSocket client for ChadReview relay system"
+edition     = { workspace = true }
+keywords    = ["client", "relay", "websocket"]
+license     = { workspace = true }
+name        = "chadreview_relay_client"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+anyhow                  = { workspace = true, features = ["std"] }
+chadreview_relay_models = { workspace = true }
+dirs                    = { workspace = true }
+futures                 = { workspace = true, features = ["std"] }
+log                     = { workspace = true }
+serde_json              = { workspace = true, features = ["std"] }
+tokio                   = { workspace = true, features = ["full"] }
+tokio-tungstenite       = { workspace = true, features = ["connect", "native-tls"] }
+uuid                    = { workspace = true, features = ["v4"] }
+
+[features]
+default          = []
+fail-on-warnings = ["chadreview_relay_models/fail-on-warnings"]
+
+[lints]
+workspace = true

@@ -1,0 +1,23 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "Shared webhook event models for ChadReview relay system"
+edition     = { workspace = true }
+keywords    = ["models", "relay", "webhook"]
+license     = { workspace = true }
+name        = "chadreview_relay_models"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chrono     = { workspace = true, features = ["serde"] }
+serde      = { workspace = true, features = ["derive", "std"] }
+serde_json = { workspace = true, features = ["std"] }
+
+[features]
+default          = []
+fail-on-warnings = []
+
+[lints]
+workspace = true

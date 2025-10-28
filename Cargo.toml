@@ -9,6 +9,9 @@ members = [
     "packages/github/models",
     "packages/pr",
     "packages/pr/models",
+    "packages/relay/client",
+    "packages/relay/models",
+    "packages/relay/server",
     "packages/state",
     "packages/syntax",
 ]
@@ -21,24 +24,39 @@ license    = "MPL-2.0"
 repository = "https://github.com/BSteffaniak/chadreview"
 version    = "0.1.0"
 
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+enum_glob_use = "deny"
+
 [workspace.dependencies]
+chadreview_app                 = { path = "packages/app", version = "0.1.0", default-features = false }
 chadreview_app_models          = { path = "packages/app/models", version = "0.1.0", default-features = false }
+chadreview_app_ui              = { path = "packages/app/ui", version = "0.1.0", default-features = false }
+chadreview_git_provider        = { path = "packages/git_provider", version = "0.1.0", default-features = false }
 chadreview_git_provider_models = { path = "packages/git_provider/models", version = "0.1.0", default-features = false }
+chadreview_github              = { path = "packages/github", version = "0.1.0", default-features = false }
 chadreview_github_models       = { path = "packages/github/models", version = "0.1.0", default-features = false }
+chadreview_pr                  = { path = "packages/pr", version = "0.1.0", default-features = false }
 chadreview_pr_models           = { path = "packages/pr/models", version = "0.1.0", default-features = false }
+chadreview_relay_client        = { path = "packages/relay/client", version = "0.1.0", default-features = false }
+chadreview_relay_models        = { path = "packages/relay/models", version = "0.1.0", default-features = false }
+chadreview_relay_server        = { path = "packages/relay/server", version = "0.1.0", default-features = false }
+chadreview_state               = { path = "packages/state", version = "0.1.0", default-features = false }
+chadreview_syntax              = { path = "packages/syntax", version = "0.1.0", default-features = false }
 
-chadreview_app          = { path = "packages/app", version = "0.1.0", default-features = false }
-chadreview_app_ui       = { path = "packages/app/ui", version = "0.1.0", default-features = false }
-chadreview_git_provider = { path = "packages/git_provider", version = "0.1.0", default-features = false }
-chadreview_github       = { path = "packages/github", version = "0.1.0", default-features = false }
-chadreview_pr           = { path = "packages/pr", version = "0.1.0", default-features = false }
-chadreview_state        = { path = "packages/state", version = "0.1.0", default-features = false }
-chadreview_syntax       = { path = "packages/syntax", version = "0.1.0", default-features = false }
-
+actix-web = { version = "4.11.0", default-features = false }
+actix-ws = { version = "0.3.0", default-features = false }
 anyhow = { version = "1", default-features = false }
 async-trait = { version = "0.1", default-features = false }
 chrono = { version = "0.4", default-features = false }
+dirs = { version = "6.0.0", default-features = false }
+env_logger = { version = "0.11.8", default-features = false }
+futures = { version = "0.3.31", default-features = false }
 gh-emoji = { version = "1.0.8", default-features = false }
+hex = { version = "0.4.3", default-features = false }
+hmac = { version = "0.12.1", default-features = false }
 log = { version = "0.4.28", default-features = false, features = [
     "release_max_level_trace",
 ] }
@@ -47,10 +65,13 @@ regex = { version = "1", default-features = false }
 reqwest = { version = "0.11", default-features = false }
 serde = { version = "1", default-features = false }
 serde_json = { version = "1", default-features = false }
+sha2 = { version = "0.10.9", default-features = false }
 syntect = { version = "5", default-features = false }
 thiserror = { version = "1", default-features = false }
 tokio = { version = "1", default-features = false }
+tokio-tungstenite = { version = "0.28.0", default-features = false }
 urlencoding = { version = "2.1.3", default-features = false }
+uuid = { version = "1.18.1", default-features = false }
 
 hyperchad             = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
 hyperchad_template    = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
