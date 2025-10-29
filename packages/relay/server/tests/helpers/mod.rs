@@ -59,7 +59,6 @@ impl Drop for TestRelayServer {
         tokio::spawn(async move {
             handle.stop(true).await;
         });
-        std::thread::sleep(std::time::Duration::from_millis(100));
     }
 }
 
