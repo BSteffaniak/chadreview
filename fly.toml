@@ -10,8 +10,9 @@ dockerfile = "packages/relay/server/Dockerfile"
 
 # Environment variables
 [env]
-HOST = "0.0.0.0"
-PORT = "8080"
+HOST     = "0.0.0.0"
+PORT     = "8080"
+RUST_LOG = "chadreview=debug,info"
 
 # HTTP service configuration
 [http_service]
