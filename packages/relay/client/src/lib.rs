@@ -19,9 +19,32 @@ pub struct RelayClient {
     relay_url: String,
     subscriptions: Arc<RwLock<HashMap<PrKey, EventCallback>>>,
     sender: Arc<RwLock<Option<futures::channel::mpsc::UnboundedSender<Message>>>>,
+    ready: Arc<tokio::sync::Notify>,
+    pending_confirmations: Arc<RwLock<HashMap<PrKey, tokio::sync::oneshot::Sender<()>>>>,
 }
 
 impl RelayClient {
+    /// Connect to the relay server
+    ///
+    /// # Errors
+    /// Returns an error if the connection cannot be established
+    pub async fn connect_async(relay_url: &str, instance_id: String) -> Result<Arc<Self>> {
+        let client = Arc::new(Self {
+            instance_id,
+            relay_url: relay_url.to_string(),
+            subscriptions: Arc::new(RwLock::new(HashMap::new())),
+            sender: Arc::new(RwLock::new(None)),
+            ready: Arc::new(tokio::sync::Notify::new()),
+            pending_confirmations: Arc::new(RwLock::new(HashMap::new())),
+        });
+
+        let notified = client.ready.notified();
+        client.clone().spawn_connection_loop();
+        notified.await;
+
+        Ok(client)
+    }
+
     /// Connect to the relay server
     ///
     /// # Errors
@@ -32,6 +55,8 @@ impl RelayClient {
             relay_url: relay_url.to_string(),
             subscriptions: Arc::new(RwLock::new(HashMap::new())),
             sender: Arc::new(RwLock::new(None)),
+            ready: Arc::new(tokio::sync::Notify::new()),
+            pending_confirmations: Arc::new(RwLock::new(HashMap::new())),
         });
 
         client.clone().spawn_connection_loop();
@@ -49,8 +74,16 @@ impl RelayClient {
             .await
             .insert(pr_key.clone(), callback);
 
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        self.pending_confirmations
+            .write()
+            .await
+            .insert(pr_key.clone(), tx);
+
         self.send_message(ClientMessage::Subscribe(SubscribeMessage { pr_key }))
             .await?;
+
+        rx.await?;
 
         Ok(())
     }
@@ -62,10 +95,18 @@ impl RelayClient {
     pub async fn unsubscribe(&self, pr_key: &PrKey) -> Result<()> {
         self.subscriptions.write().await.remove(pr_key);
 
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        self.pending_confirmations
+            .write()
+            .await
+            .insert(pr_key.clone(), tx);
+
         self.send_message(ClientMessage::Unsubscribe(UnsubscribeMessage {
             pr_key: pr_key.clone(),
         }))
         .await?;
+
+        rx.await?;
 
         Ok(())
     }
@@ -102,6 +143,7 @@ impl RelayClient {
 
         let (tx, mut rx) = futures::channel::mpsc::unbounded::<Message>();
         *self.sender.write().await = Some(tx);
+        self.ready.notify_waiters();
 
         let write_task = {
             tokio::spawn(async move {
@@ -116,6 +158,7 @@ impl RelayClient {
         let read_task = {
             let subscriptions = self.subscriptions.clone();
             let sender = self.sender.clone();
+            let pending_confirmations = self.pending_confirmations.clone();
 
             tokio::spawn(async move {
                 while let Some(msg) = read.next().await {
@@ -132,9 +175,17 @@ impl RelayClient {
                                     }
                                     ServerMessage::Subscribed { pr_key } => {
                                         log::info!("Subscribed to {pr_key:?}");
+                                        let mut confirmations = pending_confirmations.write().await;
+                                        if let Some(tx) = confirmations.remove(&pr_key) {
+                                            let _ = tx.send(());
+                                        }
                                     }
                                     ServerMessage::Unsubscribed { pr_key } => {
                                         log::info!("Unsubscribed from {pr_key:?}");
+                                        let mut confirmations = pending_confirmations.write().await;
+                                        if let Some(tx) = confirmations.remove(&pr_key) {
+                                            let _ = tx.send(());
+                                        }
                                     }
                                 }
                             }

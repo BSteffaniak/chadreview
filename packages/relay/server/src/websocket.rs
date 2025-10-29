@@ -6,6 +6,10 @@ use tokio::sync::mpsc;
 
 use crate::state::AppState;
 
+/// Handles WebSocket connections
+///
+/// # Errors
+/// Returns an error if the connection cannot be established
 #[allow(clippy::future_not_send)]
 pub async fn handler(
     req: HttpRequest,

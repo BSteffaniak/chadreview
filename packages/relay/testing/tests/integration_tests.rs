@@ -26,7 +26,7 @@ fn test_issue_comment_webhook_structure() {
     let repo = &payload["repository"];
     assert_eq!(repo["name"], "test-repo");
     assert_eq!(repo["full_name"], "test-owner/test-repo");
-    assert_eq!(repo["owner"]["login"], "test-user");
+    assert_eq!(repo["owner"]["login"], "test-owner");
 }
 
 #[test]
@@ -79,8 +79,8 @@ fn test_pull_request_webhook_structure() {
     let repo = &payload["repository"];
     assert_eq!(repo["name"], "test-repo");
     assert_eq!(repo["full_name"], "test-owner/test-repo");
-    assert_eq!(repo["owner"]["login"], "test-user");
-    assert_eq!(repo["owner"]["id"], 12345);
+    assert_eq!(repo["owner"]["login"], "test-owner");
+    assert_eq!(repo["owner"]["id"], 1);
 }
 
 #[test]
@@ -91,8 +91,8 @@ fn test_custom_user_in_webhooks() {
     let issue_payload = builder.build_issue_comment(CommentAction::Created, "Test");
     assert_eq!(issue_payload["comment"]["user"]["login"], "custom-user");
     assert_eq!(issue_payload["comment"]["user"]["id"], 88888);
-    assert_eq!(issue_payload["repository"]["owner"]["login"], "custom-user");
-    assert_eq!(issue_payload["repository"]["owner"]["id"], 88888);
+    assert_eq!(issue_payload["repository"]["owner"]["login"], "test-owner");
+    assert_eq!(issue_payload["repository"]["owner"]["id"], 1);
 
     let review_payload =
         builder.build_review_comment(CommentAction::Created, "Test", "src/main.rs", 10);
@@ -100,8 +100,8 @@ fn test_custom_user_in_webhooks() {
     assert_eq!(review_payload["comment"]["user"]["id"], 88888);
 
     let pr_payload = builder.build_pull_request(PrAction::Opened);
-    assert_eq!(pr_payload["repository"]["owner"]["login"], "custom-user");
-    assert_eq!(pr_payload["repository"]["owner"]["id"], 88888);
+    assert_eq!(pr_payload["repository"]["owner"]["login"], "test-owner");
+    assert_eq!(pr_payload["repository"]["owner"]["id"], 1);
 }
 
 #[test]

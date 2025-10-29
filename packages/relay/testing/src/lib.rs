@@ -121,7 +121,12 @@ impl WebhookBuilder {
     fn build_repository(&self) -> serde_json::Value {
         json!({
             "name": self.repo,
-            "owner": self.build_user(),
+            "owner": {
+                "id": 1,
+                "login": self.owner,
+                "avatar_url": format!("https://avatars.githubusercontent.com/u/1?v=4"),
+                "html_url": format!("https://github.com/{}", self.owner),
+            },
             "full_name": format!("{}/{}", self.owner, self.repo),
         })
     }
@@ -226,7 +231,7 @@ mod tests {
 
         assert_eq!(payload["repository"]["name"], "hello-world");
         assert_eq!(payload["repository"]["full_name"], "octocat/hello-world");
-        assert_eq!(payload["repository"]["owner"]["login"], "test-user");
+        assert_eq!(payload["repository"]["owner"]["login"], "octocat");
     }
 
     #[test]
@@ -271,7 +276,7 @@ mod tests {
 
         assert_eq!(payload["repository"]["name"], "hello-world");
         assert_eq!(payload["repository"]["full_name"], "octocat/hello-world");
-        assert_eq!(payload["repository"]["owner"]["login"], "test-user");
+        assert_eq!(payload["repository"]["owner"]["login"], "octocat");
     }
 
     #[test]
@@ -290,8 +295,8 @@ mod tests {
             payload["comment"]["user"]["html_url"],
             "https://github.com/custom-user"
         );
-        assert_eq!(payload["repository"]["owner"]["login"], "custom-user");
-        assert_eq!(payload["repository"]["owner"]["id"], 99999);
+        assert_eq!(payload["repository"]["owner"]["login"], "octocat");
+        assert_eq!(payload["repository"]["owner"]["id"], 1);
     }
 
     #[test]

@@ -16,7 +16,7 @@ pub async fn handler(
 ) -> HttpResponse {
     let instance_id = path.into_inner();
 
-    if let Err(e) = verify_github_signature(&req, &body) {
+    if let Err(e) = verify_github_signature(&req, &body, state.webhook_secret.as_deref()) {
         log::warn!("Invalid GitHub signature: {e}");
         return HttpResponse::Unauthorized().finish();
     }
@@ -78,9 +78,11 @@ pub async fn handler(
     HttpResponse::Ok().finish()
 }
 
-fn verify_github_signature(req: &HttpRequest, body: &[u8]) -> Result<(), &'static str> {
-    let secret = std::env::var("GITHUB_WEBHOOK_SECRET").ok();
-
+fn verify_github_signature(
+    req: &HttpRequest,
+    body: &[u8],
+    secret: Option<&str>,
+) -> Result<(), &'static str> {
     if secret.is_none() {
         log::warn!("GITHUB_WEBHOOK_SECRET not set, skipping signature verification");
         return Ok(());

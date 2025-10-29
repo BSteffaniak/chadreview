@@ -7,13 +7,16 @@ pub type MessageSender = mpsc::UnboundedSender<String>;
 pub struct AppState {
     pub connections: RwLock<HashMap<String, Vec<MessageSender>>>,
     pub subscriptions: RwLock<HashMap<PrKey, Vec<String>>>,
+    pub webhook_secret: Option<String>,
 }
 
 impl AppState {
-    pub fn new() -> Self {
+    #[must_use]
+    pub fn new(webhook_secret: Option<String>) -> Self {
         Self {
             connections: RwLock::new(HashMap::new()),
             subscriptions: RwLock::new(HashMap::new()),
+            webhook_secret,
         }
     }
 
