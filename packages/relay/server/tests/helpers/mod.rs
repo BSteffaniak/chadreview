@@ -22,8 +22,12 @@ impl TestRelayServer {
         let config =
             ServerConfig::new("127.0.0.1".to_string(), 0).with_webhook_secret(webhook_secret);
 
-        let (handle, addrs) = run_server_with_handle(&config)?;
-        let port = addrs.first().expect("Expected at least one address").port();
+        let response = run_server_with_handle(&config)?;
+        let port = response
+            .addrs
+            .first()
+            .expect("Expected at least one address")
+            .port();
         let http_url = format!("http://127.0.0.1:{port}");
         let ws_url = format!("ws://127.0.0.1:{port}");
 
@@ -33,7 +37,7 @@ impl TestRelayServer {
             port,
             http_url,
             ws_url,
-            handle,
+            handle: response.handle,
         })
     }
 

@@ -8,6 +8,7 @@ pub mod websocket;
 
 use actix_web::{App, HttpServer, middleware, web};
 use state::AppState;
+use tokio::task::JoinHandle;
 
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
@@ -56,31 +57,25 @@ impl ServerConfig {
 }
 
 /// # Errors
+///
 /// Returns an error if the server fails to bind or run
 #[allow(clippy::future_not_send)]
 pub async fn run_server(config: ServerConfig) -> std::io::Result<()> {
-    log::info!("Starting relay server on {}:{}", config.host, config.port);
+    let RunServerResponse { join_handle, .. } = run_server_with_handle(&config)?;
 
-    let state = web::Data::new(AppState::new(config.webhook_secret.clone()));
+    join_handle.await?
+}
 
-    HttpServer::new(move || {
-        App::new()
-            .app_data(state.clone())
-            .wrap(middleware::Logger::default())
-            .route("/webhook", web::post().to(webhook::handler))
-            .route("/ws/{instance_id}", web::get().to(websocket::handler))
-            .route("/health", web::get().to(|| async { "OK" }))
-    })
-    .bind((config.host.as_str(), config.port))?
-    .run()
-    .await
+pub struct RunServerResponse {
+    pub handle: actix_web::dev::ServerHandle,
+    pub addrs: Vec<std::net::SocketAddr>,
+    pub join_handle: JoinHandle<Result<(), std::io::Error>>,
 }
 
 /// # Errors
+///
 /// Returns an error if the server fails to bind
-pub fn run_server_with_handle(
-    config: &ServerConfig,
-) -> std::io::Result<(actix_web::dev::ServerHandle, Vec<std::net::SocketAddr>)> {
+pub fn run_server_with_handle(config: &ServerConfig) -> std::io::Result<RunServerResponse> {
     log::info!(
         "Starting relay server on {}:{} (test mode)",
         config.host,
@@ -103,7 +98,11 @@ pub fn run_server_with_handle(
     let server = server.run();
     let handle = server.handle();
 
-    tokio::spawn(server);
+    let join_handle = tokio::spawn(server);
 
-    Ok((handle, addrs))
+    Ok(RunServerResponse {
+        handle,
+        addrs,
+        join_handle,
+    })
 }
