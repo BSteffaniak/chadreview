@@ -45,7 +45,7 @@ async fn test_full_webhook_relay_flow() {
 
     let sender = WebhookSender::new(server.http_url());
     sender
-        .send_webhook(instance_id, "issue_comment", payload, None)
+        .send_webhook("issue_comment", payload, None)
         .await
         .unwrap();
 
@@ -123,7 +123,7 @@ async fn test_multiple_clients_receive_same_webhook() {
 
     let sender = WebhookSender::new(server.http_url());
     sender
-        .send_webhook("instance-1", "pull_request", payload, None)
+        .send_webhook("pull_request", payload, None)
         .await
         .unwrap();
 
@@ -167,7 +167,6 @@ async fn test_webhook_signature_verification() {
     let server = TestRelayServer::start_with_secret(Some("test-secret".to_string()))
         .await
         .unwrap();
-    let instance_id = "test-instance";
 
     let builder = WebhookBuilder::new("octocat", "hello-world", 789);
     let payload = builder.build_issue_comment(CommentAction::Created, "Test");
@@ -175,22 +174,12 @@ async fn test_webhook_signature_verification() {
     let sender = WebhookSender::new(server.http_url());
 
     let result_with_valid_secret = sender
-        .send_webhook(
-            instance_id,
-            "issue_comment",
-            payload.clone(),
-            Some("test-secret"),
-        )
+        .send_webhook("issue_comment", payload.clone(), Some("test-secret"))
         .await;
     assert!(result_with_valid_secret.is_ok());
 
     let result_with_wrong_secret = sender
-        .send_webhook(
-            instance_id,
-            "issue_comment",
-            payload.clone(),
-            Some("wrong-secret"),
-        )
+        .send_webhook("issue_comment", payload.clone(), Some("wrong-secret"))
         .await;
     assert!(result_with_wrong_secret.is_err());
 }
@@ -230,7 +219,7 @@ async fn test_unsubscribe_stops_receiving_webhooks() {
 
     let sender = WebhookSender::new(server.http_url());
     sender
-        .send_webhook(instance_id, "issue_comment", payload, None)
+        .send_webhook("issue_comment", payload, None)
         .await
         .unwrap();
 
@@ -255,7 +244,7 @@ async fn test_unsubscribe_stops_receiving_webhooks() {
 
     let payload2 = builder.build_issue_comment(CommentAction::Created, "Second");
     sender
-        .send_webhook(instance_id, "issue_comment", payload2, None)
+        .send_webhook("issue_comment", payload2, None)
         .await
         .unwrap();
 
@@ -309,7 +298,7 @@ async fn test_different_event_types() {
 
     let sender = WebhookSender::new(server.http_url());
     sender
-        .send_webhook(instance_id, "pull_request_review_comment", payload, None)
+        .send_webhook("pull_request_review_comment", payload, None)
         .await
         .unwrap();
 

@@ -14,7 +14,6 @@ pub struct PrKey {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RelayMessage {
-    pub instance_id: String,
     pub pr_key: PrKey,
     pub event: WebhookEvent,
 }

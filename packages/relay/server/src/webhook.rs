@@ -11,12 +11,9 @@ type HmacSha256 = Hmac<Sha256>;
 #[allow(clippy::future_not_send)]
 pub async fn handler(
     req: HttpRequest,
-    path: web::Path<String>,
     body: web::Bytes,
     state: web::Data<AppState>,
 ) -> HttpResponse {
-    let instance_id = path.into_inner();
-
     if let Err(e) = verify_github_signature(&req, &body, state.webhook_secret.as_deref()) {
         log::warn!("Invalid GitHub signature: {e}");
         return HttpResponse::Unauthorized().finish();
@@ -41,7 +38,6 @@ pub async fn handler(
     let pr_key = extract_pr_key(&event);
 
     let relay_msg = RelayMessage {
-        instance_id: instance_id.clone(),
         pr_key: pr_key.clone(),
         event,
     };

@@ -28,12 +28,12 @@ After deployment, your relay server will be available at:
 
 - **Health check**: `https://chadreview-relay.fly.dev/health`
 - **WebSocket**: `wss://chadreview-relay.fly.dev/ws/{instance_id}`
-- **Webhook**: `https://chadreview-relay.fly.dev/webhook/{instance_id}`
+- **Webhook**: `https://chadreview-relay.fly.dev/webhook`
 
 ## GitHub Webhook Setup
 
 1. Go to your GitHub repository → Settings → Webhooks → Add webhook
-2. **Payload URL**: `https://chadreview-relay.fly.dev/webhook/{instance_id}`
+2. **Payload URL**: `https://chadreview-relay.fly.dev/webhook`
     - Replace `{instance_id}` with a unique identifier (e.g., `my-instance`)
 3. **Content type**: `application/json`
 4. **Secret**: Use the same value you set for `GITHUB_WEBHOOK_SECRET`

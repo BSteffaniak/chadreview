@@ -168,12 +168,11 @@ impl WebhookSender {
     /// Returns an error if the HTTP request fails or the server returns an error
     pub async fn send_webhook(
         &self,
-        instance_id: &str,
         event_type: &str,
         payload: serde_json::Value,
         secret: Option<&str>,
     ) -> anyhow::Result<reqwest::Response> {
-        let url = format!("{}/webhook/{}", self.base_url, instance_id);
+        let url = format!("{}/webhook", self.base_url);
         let body = serde_json::to_vec(&payload)?;
 
         let mut request = self

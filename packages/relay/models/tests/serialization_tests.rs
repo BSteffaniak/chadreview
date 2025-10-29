@@ -157,7 +157,6 @@ fn test_pr_action_copy() {
 #[test]
 fn test_relay_message_roundtrip() {
     let relay_msg = RelayMessage {
-        instance_id: "test-instance".to_string(),
         pr_key: PrKey {
             owner: "owner".to_string(),
             repo: "repo".to_string(),

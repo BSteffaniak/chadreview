@@ -5,7 +5,7 @@ Real-time webhook relay server for ChadReview. Receives GitHub webhooks and broa
 ## Architecture
 
 - **WebSocket endpoint**: `/ws/{instance_id}` - Clients connect and subscribe to PR updates
-- **Webhook endpoint**: `/webhook/{instance_id}` - Receives GitHub webhooks
+- **Webhook endpoint**: `/webhook` - Receives GitHub webhooks
 - **Health check**: `/health` - Returns "OK" for monitoring
 
 ## Local Development
@@ -114,10 +114,10 @@ With the free tier and auto-scaling to zero:
 After deployment:
 
 - **WebSocket**: `wss://chadreview-relay.fly.dev/ws/{instance_id}`
-- **Webhook**: `https://chadreview-relay.fly.dev/webhook/{instance_id}`
+- **Webhook**: `https://chadreview-relay.fly.dev/webhook`
 - **Health**: `https://chadreview-relay.fly.dev/health`
 
-Configure GitHub webhook to point to: `https://chadreview-relay.fly.dev/webhook/{instance_id}`
+Configure GitHub webhook to point to: `https://chadreview-relay.fly.dev/webhook`
 
 ### Troubleshooting
 
@@ -185,7 +185,7 @@ wss://chadreview-relay.fly.dev/ws/{instance_id}
 
 ### Webhook Endpoint
 
-**POST** `https://chadreview-relay.fly.dev/webhook/{instance_id}`
+**POST** `https://chadreview-relay.fly.dev/webhook`
 
 Headers:
 
@@ -198,7 +198,7 @@ Body: GitHub webhook payload (JSON)
 
 When setting up webhooks in your GitHub repository:
 
-1. **Payload URL**: `https://chadreview-relay.fly.dev/webhook/{instance_id}`
+1. **Payload URL**: `https://chadreview-relay.fly.dev/webhook`
 2. **Content type**: `application/json`
 3. **Secret**: Same as `GITHUB_WEBHOOK_SECRET` environment variable
 4. **Events**: Select:

@@ -160,7 +160,6 @@ fn test_relay_message_serialization() {
     use chrono::{TimeZone, Utc};
 
     let relay_msg = RelayMessage {
-        instance_id: "test-123".to_string(),
         pr_key: PrKey {
             owner: "owner".to_string(),
             repo: "repo".to_string(),
@@ -200,14 +199,13 @@ fn test_relay_message_serialization() {
     };
 
     let json = serde_json::to_string(&relay_msg).unwrap();
-    assert!(json.contains("\"instance_id\":\"test-123\""));
     assert!(json.contains("\"owner\":\"owner\""));
+    assert!(json.contains("\"number\":1"));
 }
 
 #[test]
 fn test_server_message_webhook_with_boxed_relay_message() {
     let server_msg = ServerMessage::Webhook(Box::new(RelayMessage {
-        instance_id: "test".to_string(),
         pr_key: PrKey {
             owner: "o".to_string(),
             repo: "r".to_string(),

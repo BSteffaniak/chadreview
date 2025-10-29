@@ -120,19 +120,11 @@ async fn main() -> anyhow::Result<()> {
 
             let payload = builder.build_issue_comment(action, &body);
 
-            println!(
-                "Sending issue_comment event to {}/webhook/{}",
-                cli.url, cli.instance_id
-            );
+            println!("Sending issue_comment event to {}/webhook", cli.url);
             println!("Payload: {}", serde_json::to_string_pretty(&payload)?);
 
             let response = sender
-                .send_webhook(
-                    &cli.instance_id,
-                    "issue_comment",
-                    payload,
-                    cli.secret.as_deref(),
-                )
+                .send_webhook("issue_comment", payload, cli.secret.as_deref())
                 .await?;
 
             println!("\n✓ Success! Server responded with: {}", response.status());
@@ -158,14 +150,13 @@ async fn main() -> anyhow::Result<()> {
             let payload = builder.build_review_comment(action, &body, &path, line);
 
             println!(
-                "Sending pull_request_review_comment event to {}/webhook/{}",
-                cli.url, cli.instance_id
+                "Sending pull_request_review_comment event to {}/webhook",
+                cli.url
             );
             println!("Payload: {}", serde_json::to_string_pretty(&payload)?);
 
             let response = sender
                 .send_webhook(
-                    &cli.instance_id,
                     "pull_request_review_comment",
                     payload,
                     cli.secret.as_deref(),
@@ -191,19 +182,11 @@ async fn main() -> anyhow::Result<()> {
 
             let payload = builder.build_pull_request(action);
 
-            println!(
-                "Sending pull_request event to {}/webhook/{}",
-                cli.url, cli.instance_id
-            );
+            println!("Sending pull_request event to {}/webhook", cli.url);
             println!("Payload: {}", serde_json::to_string_pretty(&payload)?);
 
             let response = sender
-                .send_webhook(
-                    &cli.instance_id,
-                    "pull_request",
-                    payload,
-                    cli.secret.as_deref(),
-                )
+                .send_webhook("pull_request", payload, cli.secret.as_deref())
                 .await?;
 
             println!("\n✓ Success! Server responded with: {}", response.status());
