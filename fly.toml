@@ -1,0 +1,42 @@
+# Fly.io configuration for ChadReview Relay Server
+# Docs: https://fly.io/docs/reference/configuration/
+
+app            = "chadreview-relay"
+primary_region = "iad"              # Northern Virginia - change to your preferred region
+
+# Use Dockerfile in packages/relay/server/
+[build]
+dockerfile = "packages/relay/server/Dockerfile"
+
+# Environment variables
+[env]
+HOST = "0.0.0.0"
+PORT = "8080"
+
+# HTTP service configuration
+[http_service]
+auto_start_machines  = true # Wake up on incoming requests
+auto_stop_machines   = true # Scale to zero when idle
+force_https          = true
+internal_port        = 8080
+min_machines_running = 0    # Allow scaling to zero for cost savings
+
+# Machine will stop after 5 minutes of inactivity
+[http_service.concurrency]
+hard_limit = 1000
+soft_limit = 800
+type       = "connections"
+
+# Health check using your /health endpoint
+[[http_service.checks]]
+grace_period = "10s"
+interval     = "30s"
+method       = "GET"
+path         = "/health"
+timeout      = "5s"
+
+# VM configuration
+[[vm]]
+cpu_kind  = "shared"
+cpus      = 1
+memory_mb = 256      # Minimal memory for relay server
