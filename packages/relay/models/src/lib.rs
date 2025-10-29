@@ -4,6 +4,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum::{AsRefStr, EnumDiscriminants, EnumIter, EnumString};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub struct PrKey {
@@ -18,8 +19,13 @@ pub struct RelayMessage {
     pub event: WebhookEvent,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, EnumDiscriminants, AsRefStr)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+#[strum_discriminants(derive(EnumIter, Serialize, Deserialize, EnumString))]
+#[strum_discriminants(serde(rename_all = "snake_case"))]
+#[strum_discriminants(strum(serialize_all = "snake_case"))]
+#[strum_discriminants(name(WebhookEventType))]
 pub enum WebhookEvent {
     IssueComment {
         action: CommentAction,

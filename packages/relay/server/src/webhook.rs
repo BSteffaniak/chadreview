@@ -1,5 +1,7 @@
+use std::str::FromStr as _;
+
 use actix_web::{HttpRequest, HttpResponse, web};
-use chadreview_relay_models::{PrKey, RelayMessage, ServerMessage, WebhookEvent};
+use chadreview_relay_models::{PrKey, RelayMessage, ServerMessage, WebhookEvent, WebhookEventType};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
@@ -19,20 +21,30 @@ pub async fn handler(
         return HttpResponse::Unauthorized().finish();
     }
 
-    let event_type = req
-        .headers()
-        .get("X-GitHub-Event")
-        .and_then(|v| v.to_str().ok())
-        .map(String::from);
+    let Some(event_type) = req.headers().get("X-GitHub-Event") else {
+        return HttpResponse::NoContent().finish();
+    };
+
+    let Ok(event_type) = event_type.to_str() else {
+        let message = "Invalid X-GitHub-Event header";
+        log::error!("{message}");
+        return HttpResponse::BadRequest().body(message);
+    };
+
+    let event_type = event_type.to_string();
 
     drop(req);
 
-    let event: WebhookEvent = match parse_webhook_event(event_type.as_deref(), &body) {
+    let event = match parse_webhook_event(&event_type, &body) {
         Ok(event) => event,
         Err(e) => {
             log::error!("Failed to parse webhook: {e}");
             return HttpResponse::BadRequest().body(format!("Failed to parse webhook: {e}"));
         }
+    };
+
+    let Some(event) = event else {
+        return HttpResponse::NoContent().finish();
     };
 
     let pr_key = extract_pr_key(&event);
@@ -116,55 +128,57 @@ fn verify_github_signature(
 }
 
 fn parse_webhook_event(
-    event_type: Option<&str>,
+    event_type: &str,
     body: &[u8],
-) -> Result<WebhookEvent, serde_json::Error> {
+) -> Result<Option<WebhookEvent>, serde_json::Error> {
     let value: serde_json::Value = serde_json::from_slice(body)?;
 
-    match event_type {
-        Some("issue_comment") => {
+    log::debug!("Received webhook event: {event_type:?}");
+    let Ok(webhook_type) = WebhookEventType::from_str(event_type) else {
+        log::debug!("Unsupported webhook event: {event_type:?}");
+        return Ok(None);
+    };
+
+    Ok(Some(match webhook_type {
+        WebhookEventType::IssueComment => {
             let action = value["action"]
                 .as_str()
                 .and_then(|s| serde_json::from_str(&format!("\"{s}\"")).ok())
                 .unwrap_or(chadreview_relay_models::CommentAction::Created);
 
-            Ok(WebhookEvent::IssueComment {
+            WebhookEvent::IssueComment {
                 action,
                 comment: serde_json::from_value(value["comment"].clone())?,
                 issue: serde_json::from_value(value["issue"].clone())?,
                 repository: serde_json::from_value(value["repository"].clone())?,
-            })
+            }
         }
-        Some("pull_request_review_comment") => {
+        WebhookEventType::PullRequestReviewComment => {
             let action = value["action"]
                 .as_str()
                 .and_then(|s| serde_json::from_str(&format!("\"{s}\"")).ok())
                 .unwrap_or(chadreview_relay_models::CommentAction::Created);
 
-            Ok(WebhookEvent::PullRequestReviewComment {
+            WebhookEvent::PullRequestReviewComment {
                 action,
                 comment: Box::new(serde_json::from_value(value["comment"].clone())?),
                 pull_request: serde_json::from_value(value["pull_request"].clone())?,
                 repository: serde_json::from_value(value["repository"].clone())?,
-            })
+            }
         }
-        Some("pull_request") => {
+        WebhookEventType::PullRequest => {
             let action = value["action"]
                 .as_str()
                 .and_then(|s| serde_json::from_str(&format!("\"{s}\"")).ok())
                 .unwrap_or(chadreview_relay_models::PrAction::Opened);
 
-            Ok(WebhookEvent::PullRequest {
+            WebhookEvent::PullRequest {
                 action,
                 pull_request: serde_json::from_value(value["pull_request"].clone())?,
                 repository: serde_json::from_value(value["repository"].clone())?,
-            })
+            }
         }
-        _ => Err(serde_json::Error::io(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "Unknown event type",
-        ))),
-    }
+    }))
 }
 
 fn extract_pr_key(event: &WebhookEvent) -> PrKey {
