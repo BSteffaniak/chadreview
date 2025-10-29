@@ -2,6 +2,7 @@ use actix_web::{HttpRequest, HttpResponse, web};
 use chadreview_relay_models::{PrKey, RelayMessage, ServerMessage, WebhookEvent};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
+use subtle::ConstantTimeEq;
 
 use crate::state::AppState;
 
@@ -106,7 +107,12 @@ fn verify_github_signature(
     let code_bytes = result.into_bytes();
     let computed_signature = hex::encode(code_bytes);
 
-    if computed_signature == expected_signature {
+    // Use constant-time comparison to prevent timing attacks
+    if computed_signature
+        .as_bytes()
+        .ct_eq(expected_signature.as_bytes())
+        .into()
+    {
         Ok(())
     } else {
         Err("Signature mismatch")

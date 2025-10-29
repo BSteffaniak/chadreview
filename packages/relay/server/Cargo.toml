@@ -29,6 +29,7 @@ hmac                    = { workspace = true }
 log                     = { workspace = true }
 serde_json              = { workspace = true, features = ["std"] }
 sha2                    = { workspace = true }
+subtle                  = { workspace = true }
 tokio                   = { workspace = true, features = ["full"] }
 
 [dev-dependencies]
