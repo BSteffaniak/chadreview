@@ -1245,6 +1245,8 @@ dependencies = [
  "chadreview_git_provider",
  "chadreview_github",
  "chadreview_pr_models",
+ "chadreview_relay_client",
+ "chadreview_relay_models",
  "chadreview_state",
  "hyperchad",
  "hyperchad_template",

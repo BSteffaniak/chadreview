@@ -24,7 +24,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let provider: Arc<dyn chadreview_git_provider::GitProvider> = Arc::new(github_provider);
-    let router = routes::create_router(&provider);
+
+    // Get relay URL if provided (actual connection will happen when first PR is viewed)
+    let relay_url = std::env::var("RELAY_URL").ok();
+
+    if relay_url.is_some() {
+        println!(
+            "RELAY_URL configured. Real-time webhook updates will be enabled when viewing PRs."
+        );
+    } else {
+        println!("RELAY_URL not set. Real-time updates will be disabled.");
+        println!("Set RELAY_URL environment variable to enable real-time webhook updates.");
+    }
+
+    let router = routes::create_router(&provider, relay_url);
 
     println!("Router created with 4 routes:");
     println!("  GET  /pr?owner=<owner>&repo=<repo>&number=<number>");

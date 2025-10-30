@@ -16,6 +16,8 @@ use chadreview_pr_models::{
     CommentType, CreateComment,
     comment::{LineNumber, ParseLineNumberError},
 };
+use chadreview_relay_client::RelayClient;
+use chadreview_relay_models::PrKey;
 use hyperchad::{
     renderer::Content,
     router::{Container, RouteRequest, Router},
@@ -48,13 +50,14 @@ struct UpdateBody {
     body: String,
 }
 
-pub fn create_router(provider: &Arc<dyn GitProvider>) -> Router {
+pub fn create_router(provider: &Arc<dyn GitProvider>, relay_url: Option<String>) -> Router {
     Router::new()
         .with_route_result("/pr", {
             let provider = provider.clone();
             move |req: RouteRequest| {
                 let provider = provider.clone();
-                async move { pr_route(req, provider).await }
+                let relay_url = relay_url.clone();
+                async move { pr_route(req, provider, relay_url).await }
             }
         })
         .with_route_result("/api/pr/comment", {
@@ -83,6 +86,7 @@ pub fn create_router(provider: &Arc<dyn GitProvider>) -> Router {
 async fn pr_route(
     req: RouteRequest,
     provider: Arc<dyn GitProvider>,
+    relay_url: Option<String>,
 ) -> Result<Container, RouteError> {
     if !matches!(req.method, Method::Get) {
         return Err(RouteError::UnsupportedMethod);
@@ -105,6 +109,50 @@ async fn pr_route(
     let pr = provider.get_pr(owner, repo, number).await?;
     let diffs = provider.get_diff(owner, repo, number).await?;
     let comments = provider.get_comments(owner, repo, number).await?;
+
+    // Subscribe to PR webhook events for real-time updates
+    if let Some(url) = relay_url {
+        let instance_id = RelayClient::get_or_create_instance_id();
+
+        // Connect to relay server (lazily, on first PR view)
+        match RelayClient::connect_async(&url, instance_id).await {
+            Ok(client) => {
+                let pr_key = PrKey {
+                    owner: owner.to_string(),
+                    repo: repo.to_string(),
+                    number,
+                };
+
+                let owner_clone = owner.to_string();
+                let repo_clone = repo.to_string();
+
+                // Create callback that will be invoked when webhook events arrive
+                let callback = Arc::new(move |event| {
+                    log::info!(
+                        "Received webhook event for PR {owner_clone}/{repo_clone} #{number}: {event:?}"
+                    );
+
+                    // TODO: In a future enhancement, this callback should:
+                    // 1. Refetch the updated PR data from the GitHub provider
+                    // 2. Trigger HyperChad SSE updates to push changes to all connected clients
+                    // 3. Update the UI with the new data (new comments, PR state changes, etc.)
+                    //
+                    // For now, the callback just logs the event. The real-time update mechanism
+                    // would need to integrate with HyperChad's state management and SSE system.
+                });
+
+                // Subscribe to this PR's events
+                if let Err(e) = client.subscribe(pr_key, callback).await {
+                    log::warn!("Failed to subscribe to PR webhook events: {e}");
+                } else {
+                    log::info!("Subscribed to webhook events for PR {owner}/{repo} #{number}");
+                }
+            }
+            Err(e) => {
+                log::warn!("Failed to connect to relay server: {e}");
+            }
+        }
+    }
 
     Ok(render_pr_view(&pr, &diffs, &comments, owner, repo, number))
 }
