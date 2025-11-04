@@ -14,6 +14,7 @@ pub struct Comment {
     pub updated_at: DateTime<Utc>,
     pub comment_type: CommentType,
     pub replies: Vec<Comment>,
+    pub resolved: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

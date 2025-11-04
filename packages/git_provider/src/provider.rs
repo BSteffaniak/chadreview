@@ -115,6 +115,26 @@ pub trait GitProvider: Send + Sync {
         comment_id: u64,
     ) -> Result<()>;
 
+    /// Marks a review comment thread as resolved or unresolved.
+    ///
+    /// # Arguments
+    /// * `owner` - Repository owner username or organization
+    /// * `repo` - Repository name
+    /// * `number` - Pull request number
+    /// * `comment_id` - Root comment ID of the thread
+    /// * `resolved` - True to mark as resolved, false to unresolve
+    ///
+    /// # Returns
+    /// Success or error result
+    async fn resolve_comment(
+        &self,
+        owner: &str,
+        repo: &str,
+        number: u64,
+        comment_id: u64,
+        resolved: bool,
+    ) -> Result<()>;
+
     /// Returns the provider name identifier.
     ///
     /// # Returns

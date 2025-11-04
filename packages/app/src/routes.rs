@@ -6,7 +6,8 @@ use std::sync::Arc;
 
 use chadreview_app_ui::{
     comment_thread::{
-        comment_thread_id, render_comment_item, render_comment_thread, render_reply_form,
+        comment_class, comment_thread_id, render_comment_item, render_comment_thread,
+        render_reply_form,
     },
     diff_viewer::render_line_comments,
     general_comments,
@@ -81,6 +82,20 @@ pub fn create_router(provider: &Arc<dyn GitProvider>, relay_url: Option<String>)
                 async move { delete_comment_route(req, provider).await }
             }
         })
+        .with_route_result("/api/comment/resolve", {
+            let provider = provider.clone();
+            move |req: RouteRequest| {
+                let provider = provider.clone();
+                async move { resolve_comment_route(req, provider).await }
+            }
+        })
+        .with_route_result("/api/comment/expand", {
+            let provider = provider.clone();
+            move |req: RouteRequest| {
+                let provider = provider.clone();
+                async move { expand_comment_route(req, provider).await }
+            }
+        })
 }
 
 async fn pr_route(
@@ -118,13 +133,13 @@ async fn pr_route(
         match RelayClient::connect_async(&url, instance_id).await {
             Ok(client) => {
                 let pr_key = PrKey {
-                    owner: owner.to_string(),
-                    repo: repo.to_string(),
+                    owner: owner.clone(),
+                    repo: repo.clone(),
                     number,
                 };
 
-                let owner_clone = owner.to_string();
-                let repo_clone = repo.to_string();
+                let owner_clone = owner.clone();
+                let repo_clone = repo.clone();
 
                 // Create callback that will be invoked when webhook events arrive
                 let callback = Arc::new(move |event| {
@@ -355,6 +370,116 @@ async fn delete_comment_route(
         .await?;
 
     Ok(response.build())
+}
+
+async fn resolve_comment_route(
+    req: RouteRequest,
+    provider: Arc<dyn GitProvider>,
+) -> Result<Container, RouteError> {
+    if !matches!(req.method, Method::Post) {
+        return Err(RouteError::UnsupportedMethod);
+    }
+
+    let comment_id = req
+        .query
+        .get("id")
+        .ok_or(RouteError::MissingQueryParam("id"))?
+        .parse::<u64>()?;
+    let owner = req
+        .query
+        .get("owner")
+        .ok_or(RouteError::MissingQueryParam("owner"))?;
+    let repo = req
+        .query
+        .get("repo")
+        .ok_or(RouteError::MissingQueryParam("repo"))?;
+    let number = req
+        .query
+        .get("number")
+        .ok_or(RouteError::MissingQueryParam("number"))?
+        .parse::<u64>()?;
+    let resolved = req
+        .query
+        .get("resolved")
+        .ok_or(RouteError::MissingQueryParam("resolved"))?
+        .parse::<bool>()?;
+
+    provider
+        .resolve_comment(owner, repo, number, comment_id, resolved)
+        .await?;
+
+    let comment = provider
+        .get_comment(owner, repo, number, comment_id, true)
+        .await?;
+
+    Ok(render_comment_thread(comment_id, &comment, 0, owner, repo, number).into())
+}
+
+async fn expand_comment_route(
+    req: RouteRequest,
+    provider: Arc<dyn GitProvider>,
+) -> Result<Container, RouteError> {
+    if !matches!(req.method, Method::Get) {
+        return Err(RouteError::UnsupportedMethod);
+    }
+
+    let comment_id = req
+        .query
+        .get("id")
+        .ok_or(RouteError::MissingQueryParam("id"))?
+        .parse::<u64>()?;
+    let owner = req
+        .query
+        .get("owner")
+        .ok_or(RouteError::MissingQueryParam("owner"))?;
+    let repo = req
+        .query
+        .get("repo")
+        .ok_or(RouteError::MissingQueryParam("repo"))?;
+    let number = req
+        .query
+        .get("number")
+        .ok_or(RouteError::MissingQueryParam("number"))?
+        .parse::<u64>()?;
+
+    let comment = provider
+        .get_comment(owner, repo, number, comment_id, true)
+        .await?;
+
+    // Render with collapse ignored (temporarily expanded)
+    Ok(render_comment_thread_expanded(
+        comment_id, &comment, 0, owner, repo, number,
+    ))
+}
+
+fn render_comment_thread_expanded(
+    root_comment_id: u64,
+    comment: &chadreview_pr_models::Comment,
+    depth: usize,
+    owner: &str,
+    repo: &str,
+    number: u64,
+) -> Container {
+    let margin_left = i32::try_from(depth * 20).unwrap_or(0);
+    let is_root = depth == 0;
+
+    container! {
+        div
+            id=(comment_thread_id(comment.id))
+            class=(comment_class(comment.id))
+            margin-left=(margin_left)
+            border-left="2, #d0d7de"
+            padding-left=12
+            gap=12
+        {
+            (render_comment_item(comment, is_root, owner, repo, number))
+            (render_reply_form(root_comment_id, comment.id, owner, repo, number))
+            @for reply in &comment.replies {
+                (render_comment_thread_expanded(root_comment_id, reply, depth + 1, owner, repo, number))
+            }
+        }
+    }
+    .into()
 }
 
 fn render_pr_view(

@@ -43,6 +43,43 @@ impl GitHubProvider {
         self.base_url = base_url;
         self
     }
+
+    /// Execute a GraphQL query against GitHub's GraphQL API.
+    async fn graphql_query(&self, query: &str) -> Result<serde_json::Value> {
+        let url = format!("{}/graphql", self.base_url);
+        let body = serde_json::json!({ "query": query });
+
+        log::debug!("GraphQL query: {query}");
+
+        let mut request = self
+            .http_client
+            .post(&url)
+            .header("Accept", "application/vnd.github.v3+json")
+            .json(&body);
+
+        if let Some(token) = &self.auth_token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let error_text = response.text().await?;
+            log::error!("GitHub GraphQL error: {error_text}");
+            anyhow::bail!("GitHub GraphQL error: {status}");
+        }
+
+        let result: serde_json::Value = response.json().await?;
+
+        // Check for GraphQL errors
+        if let Some(errors) = result.get("errors") {
+            log::error!("GraphQL errors: {errors}");
+            anyhow::bail!("GraphQL query failed: {errors}");
+        }
+
+        Ok(result)
+    }
 }
 
 impl Default for GitHubProvider {
@@ -141,16 +178,48 @@ impl GitProvider for GitHubProvider {
     }
 
     async fn get_comments(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<Comment>> {
-        let review_comments = fetch_all_paginated(
-            &self.http_client,
-            &format!(
-                "{}/repos/{owner}/{repo}/pulls/{number}/comments",
-                self.base_url
-            ),
-            self.auth_token.as_ref(),
-        )
-        .await?;
+        // Use GraphQL to fetch review threads with resolved status
+        let query = format!(
+            r#"
+            query {{
+              repository(owner: "{owner}", name: "{repo}") {{
+                pullRequest(number: {number}) {{
+                  reviewThreads(first: 100) {{
+                    nodes {{
+                      id
+                      isResolved
+                      comments(first: 100) {{
+                        nodes {{
+                          id
+                          databaseId
+                          body
+                          createdAt
+                          updatedAt
+                          author {{
+                            login
+                            avatarUrl
+                            url
+                          }}
+                          path
+                          line
+                          originalLine
+                          diffHunk
+                          replyTo {{
+                            databaseId
+                          }}
+                        }}
+                      }}
+                    }}
+                  }}
+                }}
+              }}
+            }}
+            "#
+        );
 
+        let result = self.graphql_query(&query).await?;
+
+        // Also fetch general issue comments (not part of review threads)
         let issue_comments = fetch_all_paginated(
             &self.http_client,
             &format!(
@@ -161,20 +230,41 @@ impl GitProvider for GitHubProvider {
         )
         .await?;
 
-        let mut all_comments_with_reply_info = Vec::new();
+        let mut all_comments = Vec::new();
 
-        for comment_data in &review_comments {
-            let comment = parse_review_comment(comment_data);
-            let in_reply_to = comment_data["in_reply_to_id"].as_u64();
-            all_comments_with_reply_info.push((comment, in_reply_to));
+        // Parse GraphQL review threads
+        if let Some(threads) =
+            result["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"].as_array()
+        {
+            for thread in threads {
+                let is_resolved = thread["isResolved"].as_bool().unwrap_or(false);
+
+                if let Some(comments) = thread["comments"]["nodes"].as_array() {
+                    let mut thread_comments_with_replies = Vec::new();
+
+                    for comment_data in comments {
+                        let mut comment = parse_graphql_review_comment(comment_data);
+                        // Set resolved status from thread
+                        comment.resolved = is_resolved;
+
+                        let reply_to = comment_data["replyTo"]["databaseId"].as_u64();
+                        thread_comments_with_replies.push((comment, reply_to));
+                    }
+
+                    // Thread the comments within this review thread
+                    let threaded = thread_comments(thread_comments_with_replies);
+                    all_comments.extend(threaded);
+                }
+            }
         }
 
+        // Add general issue comments (not resolved)
         for comment_data in &issue_comments {
             let comment = parse_issue_comment(comment_data);
-            all_comments_with_reply_info.push((comment, None));
+            all_comments.push(comment);
         }
 
-        Ok(thread_comments(all_comments_with_reply_info))
+        Ok(all_comments)
     }
 
     async fn get_comment(
@@ -504,6 +594,75 @@ impl GitProvider for GitHubProvider {
         Ok(())
     }
 
+    async fn resolve_comment(
+        &self,
+        owner: &str,
+        repo: &str,
+        _number: u64,
+        comment_id: u64,
+        resolved: bool,
+    ) -> Result<()> {
+        // First get the node_id for the comment
+        let url = format!(
+            "{}/repos/{}/{}/pulls/comments/{}",
+            self.base_url, owner, repo, comment_id
+        );
+
+        log::debug!("GET {url} to fetch node_id for resolving");
+
+        let mut request = self
+            .http_client
+            .get(&url)
+            .header("Accept", "application/vnd.github.v3+json");
+
+        if let Some(token) = &self.auth_token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+        let data: serde_json::Value = response.json().await?;
+        let node_id = data["node_id"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("No node_id found"))?;
+
+        // Use GraphQL mutation to resolve/unresolve
+        let mutation = if resolved {
+            format!(
+                r#"mutation {{ resolveReviewThread(input: {{threadId: "{node_id}"}}) {{ thread {{ id }} }} }}"#
+            )
+        } else {
+            format!(
+                r#"mutation {{ unresolveReviewThread(input: {{threadId: "{node_id}"}}) {{ thread {{ id }} }} }}"#
+            )
+        };
+
+        log::debug!("GraphQL mutation: {mutation}");
+
+        let graphql_url = format!("{}/graphql", self.base_url);
+        let body = serde_json::json!({ "query": mutation });
+
+        let mut request = self
+            .http_client
+            .post(&graphql_url)
+            .header("Accept", "application/vnd.github.v3+json")
+            .json(&body);
+
+        if let Some(token) = &self.auth_token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let error_text = response.text().await?;
+            log::error!("GitHub GraphQL error: {error_text}");
+            anyhow::bail!("GitHub GraphQL error: {status}");
+        }
+
+        Ok(())
+    }
+
     fn provider_name(&self) -> &'static str {
         "github"
     }
@@ -733,6 +892,7 @@ fn parse_review_comment(value: &serde_json::Value) -> Comment {
         updated_at: parse_datetime(value["updated_at"].as_str().unwrap()),
         comment_type,
         replies: Vec::new(),
+        resolved: value["resolved"].as_bool().unwrap_or(false),
     }
 }
 
@@ -747,6 +907,59 @@ fn parse_issue_comment(value: &serde_json::Value) -> Comment {
         updated_at: parse_datetime(value["updated_at"].as_str().unwrap()),
         comment_type: CommentType::General,
         replies: Vec::new(),
+        resolved: false,
+    }
+}
+
+fn parse_graphql_review_comment(value: &serde_json::Value) -> Comment {
+    use chadreview_pr_models::CommentType;
+
+    let path = value["path"].as_str().unwrap_or("").to_string();
+    let line = value["line"].as_u64();
+    let original_line = value["originalLine"].as_u64();
+
+    // For GraphQL, we need to extract commit SHA from diffHunk or use empty string
+    let commit_sha = String::new(); // GraphQL doesn't provide commit_id directly
+
+    let comment_type = if line.is_none() && original_line.is_none() {
+        // File-level comment
+        CommentType::FileLevelComment { path }
+    } else if let Some(line_num) = line {
+        // New line comment
+        CommentType::LineLevelComment {
+            commit_sha,
+            path,
+            line: LineNumber::New { line: line_num },
+        }
+    } else if let Some(line_num) = original_line {
+        // Old line comment
+        CommentType::LineLevelComment {
+            commit_sha,
+            path,
+            line: LineNumber::Old { line: line_num },
+        }
+    } else {
+        CommentType::FileLevelComment { path }
+    };
+
+    Comment {
+        id: value["databaseId"].as_u64().unwrap(),
+        author: parse_graphql_user(&value["author"]),
+        body: value["body"].as_str().unwrap().to_string(),
+        created_at: parse_datetime(value["createdAt"].as_str().unwrap()),
+        updated_at: parse_datetime(value["updatedAt"].as_str().unwrap()),
+        comment_type,
+        replies: Vec::new(),
+        resolved: false, // Will be set by caller based on thread
+    }
+}
+
+fn parse_graphql_user(value: &serde_json::Value) -> User {
+    User {
+        id: String::new(), // GraphQL doesn't return numeric ID in this format
+        username: value["login"].as_str().unwrap_or("unknown").to_string(),
+        avatar_url: value["avatarUrl"].as_str().unwrap_or("").to_string(),
+        html_url: value["url"].as_str().unwrap_or("").to_string(),
     }
 }
 
@@ -905,7 +1118,18 @@ mod tests {
     async fn test_get_comments_general() {
         let mock_server = MockServer::start().await;
 
-        let review_comments = serde_json::json!([]);
+        let graphql_response = serde_json::json!({
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "reviewThreads": {
+                            "nodes": []
+                        }
+                    }
+                }
+            }
+        });
+
         let issue_comments = serde_json::json!([
             {
                 "id": 1001,
@@ -921,9 +1145,9 @@ mod tests {
             }
         ]);
 
-        Mock::given(method("GET"))
-            .and(path("/repos/owner/repo/pulls/123/comments"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(&review_comments))
+        Mock::given(method("POST"))
+            .and(path("/graphql"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&graphql_response))
             .mount(&mock_server)
             .await;
 
@@ -954,29 +1178,49 @@ mod tests {
     async fn test_get_comments_line_level() {
         let mock_server = MockServer::start().await;
 
-        let review_comments = serde_json::json!([
-            {
-                "id": 2001,
-                "body": "This needs fixing",
-                "path": "src/main.rs",
-                "commit_id": "1234567890",
-                "line": 42,
-                "user": {
-                    "id": 12345,
-                    "login": "reviewer1",
-                    "avatar_url": "https://example.com/avatar1.png",
-                    "html_url": "https://github.com/reviewer1"
-                },
-                "created_at": "2025-01-01T10:00:00Z",
-                "updated_at": "2025-01-01T10:00:00Z",
-                "in_reply_to_id": null
+        let graphql_response = serde_json::json!({
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "reviewThreads": {
+                            "nodes": [
+                                {
+                                    "id": "thread1",
+                                    "isResolved": false,
+                                    "comments": {
+                                        "nodes": [
+                                            {
+                                                "id": "comment1",
+                                                "databaseId": 2001,
+                                                "body": "This needs fixing",
+                                                "createdAt": "2025-01-01T10:00:00Z",
+                                                "updatedAt": "2025-01-01T10:00:00Z",
+                                                "author": {
+                                                    "login": "reviewer1",
+                                                    "avatarUrl": "https://example.com/avatar1.png",
+                                                    "url": "https://github.com/reviewer1"
+                                                },
+                                                "path": "src/main.rs",
+                                                "line": 42,
+                                                "originalLine": null,
+                                                "diffHunk": "@@ -40,6 +40,7 @@ fn main() {",
+                                                "replyTo": null
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
             }
-        ]);
+        });
+
         let issue_comments = serde_json::json!([]);
 
-        Mock::given(method("GET"))
-            .and(path("/repos/owner/repo/pulls/123/comments"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(&review_comments))
+        Mock::given(method("POST"))
+            .and(path("/graphql"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&graphql_response))
             .mount(&mock_server)
             .await;
 
@@ -1001,7 +1245,7 @@ mod tests {
                 path,
                 line,
             } => {
-                assert_eq!(commit_sha, "1234567890");
+                assert_eq!(commit_sha, ""); // GraphQL doesn't provide commit_id
                 assert_eq!(path, "src/main.rs");
                 assert_eq!(*line, LineNumber::New { line: 42 });
             }
@@ -1013,44 +1257,68 @@ mod tests {
     async fn test_get_comments_threaded() {
         let mock_server = MockServer::start().await;
 
-        let review_comments = serde_json::json!([
-            {
-                "id": 3001,
-                "body": "Parent comment",
-                "path": "src/lib.rs",
-                "commit_id": "1234567890",
-                "line": 10,
-                "user": {
-                    "id": 12345,
-                    "login": "reviewer1",
-                    "avatar_url": "https://example.com/avatar1.png",
-                    "html_url": "https://github.com/reviewer1"
-                },
-                "created_at": "2025-01-01T10:00:00Z",
-                "updated_at": "2025-01-01T10:00:00Z",
-                "in_reply_to_id": null
-            },
-            {
-                "id": 3002,
-                "body": "Reply to parent",
-                "path": "src/lib.rs",
-                "line": 10,
-                "user": {
-                    "id": 67890,
-                    "login": "author",
-                    "avatar_url": "https://example.com/avatar2.png",
-                    "html_url": "https://github.com/author"
-                },
-                "created_at": "2025-01-01T11:00:00Z",
-                "updated_at": "2025-01-01T11:00:00Z",
-                "in_reply_to_id": 3001
+        let graphql_response = serde_json::json!({
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "reviewThreads": {
+                            "nodes": [
+                                {
+                                    "id": "thread1",
+                                    "isResolved": false,
+                                    "comments": {
+                                        "nodes": [
+                                            {
+                                                "id": "comment1",
+                                                "databaseId": 3001,
+                                                "body": "Parent comment",
+                                                "createdAt": "2025-01-01T10:00:00Z",
+                                                "updatedAt": "2025-01-01T10:00:00Z",
+                                                "author": {
+                                                    "login": "reviewer1",
+                                                    "avatarUrl": "https://example.com/avatar1.png",
+                                                    "url": "https://github.com/reviewer1"
+                                                },
+                                                "path": "src/lib.rs",
+                                                "line": 10,
+                                                "originalLine": null,
+                                                "diffHunk": "@@ -8,6 +8,7 @@ fn test() {",
+                                                "replyTo": null
+                                            },
+                                            {
+                                                "id": "comment2",
+                                                "databaseId": 3002,
+                                                "body": "Reply to parent",
+                                                "createdAt": "2025-01-01T11:00:00Z",
+                                                "updatedAt": "2025-01-01T11:00:00Z",
+                                                "author": {
+                                                    "login": "author",
+                                                    "avatarUrl": "https://example.com/avatar2.png",
+                                                    "url": "https://github.com/author"
+                                                },
+                                                "path": "src/lib.rs",
+                                                "line": 10,
+                                                "originalLine": null,
+                                                "diffHunk": "@@ -8,6 +8,7 @@ fn test() {",
+                                                "replyTo": {
+                                                    "databaseId": 3001
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
             }
-        ]);
+        });
+
         let issue_comments = serde_json::json!([]);
 
-        Mock::given(method("GET"))
-            .and(path("/repos/owner/repo/pulls/123/comments"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(&review_comments))
+        Mock::given(method("POST"))
+            .and(path("/graphql"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&graphql_response))
             .mount(&mock_server)
             .await;
 
@@ -1079,24 +1347,44 @@ mod tests {
     async fn test_get_comments_mixed_types() {
         let mock_server = MockServer::start().await;
 
-        let review_comments = serde_json::json!([
-            {
-                "id": 4001,
-                "body": "Line comment",
-                "path": "src/main.rs",
-                "commit_id": "1234567890",
-                "line": 5,
-                "user": {
-                    "id": 12345,
-                    "login": "reviewer1",
-                    "avatar_url": "https://example.com/avatar1.png",
-                    "html_url": "https://github.com/reviewer1"
-                },
-                "created_at": "2025-01-01T10:00:00Z",
-                "updated_at": "2025-01-01T10:00:00Z",
-                "in_reply_to_id": null
+        let graphql_response = serde_json::json!({
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "reviewThreads": {
+                            "nodes": [
+                                {
+                                    "id": "thread1",
+                                    "isResolved": false,
+                                    "comments": {
+                                        "nodes": [
+                                            {
+                                                "id": "comment1",
+                                                "databaseId": 4001,
+                                                "body": "Line comment",
+                                                "createdAt": "2025-01-01T10:00:00Z",
+                                                "updatedAt": "2025-01-01T10:00:00Z",
+                                                "author": {
+                                                    "login": "reviewer1",
+                                                    "avatarUrl": "https://example.com/avatar1.png",
+                                                    "url": "https://github.com/reviewer1"
+                                                },
+                                                "path": "src/main.rs",
+                                                "line": 5,
+                                                "originalLine": null,
+                                                "diffHunk": "@@ -3,6 +3,7 @@ fn main() {",
+                                                "replyTo": null
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
             }
-        ]);
+        });
+
         let issue_comments = serde_json::json!([
             {
                 "id": 4002,
@@ -1112,9 +1400,9 @@ mod tests {
             }
         ]);
 
-        Mock::given(method("GET"))
-            .and(path("/repos/owner/repo/pulls/123/comments"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(&review_comments))
+        Mock::given(method("POST"))
+            .and(path("/graphql"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&graphql_response))
             .mount(&mock_server)
             .await;
 
@@ -1792,63 +2080,91 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn test_get_comment_with_replies() {
         let mock_server = MockServer::start().await;
 
-        let review_comments = serde_json::json!([
-            {
-                "id": 8003,
-                "body": "Parent comment",
-                "path": "src/lib.rs",
-                "commit_id": "abc123",
-                "line": 10,
-                "user": {
-                    "id": 12345,
-                    "login": "reviewer1",
-                    "avatar_url": "https://example.com/avatar1.png",
-                    "html_url": "https://github.com/reviewer1"
-                },
-                "created_at": "2025-01-01T10:00:00Z",
-                "updated_at": "2025-01-01T10:00:00Z",
-                "in_reply_to_id": null
-            },
-            {
-                "id": 8004,
-                "body": "First reply",
-                "path": "src/lib.rs",
-                "line": 10,
-                "user": {
-                    "id": 67890,
-                    "login": "author",
-                    "avatar_url": "https://example.com/avatar2.png",
-                    "html_url": "https://github.com/author"
-                },
-                "created_at": "2025-01-01T11:00:00Z",
-                "updated_at": "2025-01-01T11:00:00Z",
-                "in_reply_to_id": 8003
-            },
-            {
-                "id": 8005,
-                "body": "Second reply",
-                "path": "src/lib.rs",
-                "line": 10,
-                "user": {
-                    "id": 11111,
-                    "login": "reviewer2",
-                    "avatar_url": "https://example.com/avatar3.png",
-                    "html_url": "https://github.com/reviewer2"
-                },
-                "created_at": "2025-01-01T12:00:00Z",
-                "updated_at": "2025-01-01T12:00:00Z",
-                "in_reply_to_id": 8003
+        let graphql_response = serde_json::json!({
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "reviewThreads": {
+                            "nodes": [
+                                {
+                                    "id": "thread1",
+                                    "isResolved": false,
+                                    "comments": {
+                                        "nodes": [
+                                            {
+                                                "id": "comment1",
+                                                "databaseId": 8003,
+                                                "body": "Parent comment",
+                                                "createdAt": "2025-01-01T10:00:00Z",
+                                                "updatedAt": "2025-01-01T10:00:00Z",
+                                                "author": {
+                                                    "login": "reviewer1",
+                                                    "avatarUrl": "https://example.com/avatar1.png",
+                                                    "url": "https://github.com/reviewer1"
+                                                },
+                                                "path": "src/lib.rs",
+                                                "line": 10,
+                                                "originalLine": null,
+                                                "diffHunk": "@@ -8,6 +8,7 @@ fn test() {",
+                                                "replyTo": null
+                                            },
+                                            {
+                                                "id": "comment2",
+                                                "databaseId": 8004,
+                                                "body": "First reply",
+                                                "createdAt": "2025-01-01T11:00:00Z",
+                                                "updatedAt": "2025-01-01T11:00:00Z",
+                                                "author": {
+                                                    "login": "author",
+                                                    "avatarUrl": "https://example.com/avatar2.png",
+                                                    "url": "https://github.com/author"
+                                                },
+                                                "path": "src/lib.rs",
+                                                "line": 10,
+                                                "originalLine": null,
+                                                "diffHunk": "@@ -8,6 +8,7 @@ fn test() {",
+                                                "replyTo": {
+                                                    "databaseId": 8003
+                                                }
+                                            },
+                                            {
+                                                "id": "comment3",
+                                                "databaseId": 8005,
+                                                "body": "Second reply",
+                                                "createdAt": "2025-01-01T12:00:00Z",
+                                                "updatedAt": "2025-01-01T12:00:00Z",
+                                                "author": {
+                                                    "login": "reviewer2",
+                                                    "avatarUrl": "https://example.com/avatar3.png",
+                                                    "url": "https://github.com/reviewer2"
+                                                },
+                                                "path": "src/lib.rs",
+                                                "line": 10,
+                                                "originalLine": null,
+                                                "diffHunk": "@@ -8,6 +8,7 @@ fn test() {",
+                                                "replyTo": {
+                                                    "databaseId": 8003
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
             }
-        ]);
+        });
 
         let issue_comments = serde_json::json!([]);
 
-        Mock::given(method("GET"))
-            .and(path("/repos/owner/repo/pulls/123/comments"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(&review_comments))
+        Mock::given(method("POST"))
+            .and(path("/graphql"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&graphql_response))
             .mount(&mock_server)
             .await;
 

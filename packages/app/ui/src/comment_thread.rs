@@ -31,6 +31,8 @@ pub fn render_comment_thread(
     number: u64,
 ) -> Containers {
     let margin_left = i32::try_from(depth * 20).unwrap_or(0);
+    let is_root = depth == 0;
+    let should_collapse = is_root && comment.resolved;
 
     container! {
         div
@@ -41,10 +43,14 @@ pub fn render_comment_thread(
             padding-left=12
             gap=12
         {
-            (render_comment_item(comment, root_comment_id == comment.id, owner, repo, number))
-            (render_reply_form(root_comment_id, comment.id, owner, repo, number))
-            @for reply in &comment.replies {
-                (render_comment_thread(root_comment_id, reply, depth + 1, owner, repo, number))
+            @if should_collapse {
+                (render_collapsed_thread_header(comment, owner, repo, number))
+            } @else {
+                (render_comment_item(comment, is_root, owner, repo, number))
+                (render_reply_form(root_comment_id, comment.id, owner, repo, number))
+                @for reply in &comment.replies {
+                    (render_comment_thread(root_comment_id, reply, depth + 1, owner, repo, number))
+                }
             }
         }
     }
@@ -103,6 +109,7 @@ pub fn render_comment_item(
                 (render_reply_button(comment))
                 (render_edit_button(comment))
                 (render_delete_button(comment, root, owner, repo, number))
+                (render_resolve_button(comment, root, owner, repo, number))
             }
         }
     }
@@ -407,6 +414,131 @@ pub fn render_delete_button(
             {
                 "Delete"
             }
+        }
+    }
+}
+
+#[must_use]
+pub fn render_resolve_button(
+    comment: &Comment,
+    root: bool,
+    owner: &str,
+    repo: &str,
+    number: u64,
+) -> Containers {
+    if !root {
+        return container! { div {} };
+    }
+
+    let api_url = format!(
+        "/api/comment/resolve?owner={}&repo={}&number={}&id={}&resolved={}",
+        urlencoding::encode(owner),
+        urlencoding::encode(repo),
+        number,
+        comment.id,
+        !comment.resolved
+    );
+
+    let button_text = if comment.resolved {
+        "Unresolve"
+    } else {
+        "Resolve"
+    };
+    let button_color = if comment.resolved {
+        "#8250df"
+    } else {
+        "#1a7f37"
+    };
+
+    container! {
+        form
+            hx-post=(api_url)
+            hx-swap="outerHTML"
+            hx-target=(Selector::Id(comment_thread_id(comment.id)))
+        {
+            button
+                type=submit
+                color=(button_color)
+                padding-x=8
+                padding-y=4
+                cursor=pointer
+                font-size=12
+                font-weight=500
+            {
+                (button_text)
+            }
+        }
+    }
+}
+
+fn count_replies(comment: &Comment) -> usize {
+    let mut count = comment.replies.len();
+    for reply in &comment.replies {
+        count += count_replies(reply);
+    }
+    count
+}
+
+#[must_use]
+pub fn render_collapsed_thread_header(
+    comment: &Comment,
+    owner: &str,
+    repo: &str,
+    number: u64,
+) -> Containers {
+    let thread_id = comment_thread_id(comment.id);
+    let reply_count = count_replies(comment);
+    let reply_text = if reply_count == 1 {
+        "1 reply".to_string()
+    } else {
+        format!("{reply_count} replies")
+    };
+
+    container! {
+        div
+            padding=12
+            background="#f6f8fa"
+            border="1, #8250df"
+            border-radius=6
+            direction=row
+            align-items=center
+            gap=12
+        {
+            span font-size=14 color="#8250df" font-weight=600 { "✓ Resolved" }
+            image
+                width=20
+                height=20
+                border-radius=10
+                src=(comment.author.avatar_url)
+            {}
+            anchor
+                color="#0969da"
+                font-weight=600
+                font-size=14
+                href=(comment.author.html_url)
+            {
+                (comment.author.username)
+            }
+            span font-size=14 color="#57606a" { "started this conversation" }
+            @if reply_count > 0 {
+                span font-size=12 color="#57606a" { "·" }
+                span font-size=12 color="#57606a" { (reply_text) }
+            }
+            div flex=1 {}
+            button
+                type=button
+                color="#0969da"
+                padding-x=8
+                padding-y=4
+                cursor=pointer
+                font-size=12
+                hx-get=(format!("/api/comment/expand?owner={}&repo={}&number={}&id={}", owner, repo, number, comment.id))
+                hx-swap="outerHTML"
+                hx-target=(Selector::Id(thread_id))
+            {
+                "Show resolved"
+            }
+            (render_resolve_button(comment, true, owner, repo, number))
         }
     }
 }
