@@ -23,7 +23,7 @@ use hyperchad::{
     renderer::Content,
     router::{Container, RouteRequest, Router},
 };
-use hyperchad_template::{Selector, container};
+use hyperchad_template::{Containers, Selector, container};
 use switchy::http::models::Method;
 
 #[derive(Debug, thiserror::Error)]
@@ -94,6 +94,13 @@ pub fn create_router(provider: &Arc<dyn GitProvider>, relay_url: Option<String>)
             move |req: RouteRequest| {
                 let provider = provider.clone();
                 async move { expand_comment_route(req, provider).await }
+            }
+        })
+        .with_route_result("/api/comment/collapse", {
+            let provider = provider.clone();
+            move |req: RouteRequest| {
+                let provider = provider.clone();
+                async move { collapse_comment_route(req, provider).await }
             }
         })
 }
@@ -447,9 +454,42 @@ async fn expand_comment_route(
         .await?;
 
     // Render with collapse ignored (temporarily expanded)
-    Ok(render_comment_thread_expanded(
-        comment_id, &comment, 0, owner, repo, number,
-    ))
+    Ok(render_comment_thread_expanded(comment_id, &comment, 0, owner, repo, number).into())
+}
+
+async fn collapse_comment_route(
+    req: RouteRequest,
+    provider: Arc<dyn GitProvider>,
+) -> Result<Container, RouteError> {
+    if !matches!(req.method, Method::Get) {
+        return Err(RouteError::UnsupportedMethod);
+    }
+
+    let comment_id = req
+        .query
+        .get("id")
+        .ok_or(RouteError::MissingQueryParam("id"))?
+        .parse::<u64>()?;
+    let owner = req
+        .query
+        .get("owner")
+        .ok_or(RouteError::MissingQueryParam("owner"))?;
+    let repo = req
+        .query
+        .get("repo")
+        .ok_or(RouteError::MissingQueryParam("repo"))?;
+    let number = req
+        .query
+        .get("number")
+        .ok_or(RouteError::MissingQueryParam("number"))?
+        .parse::<u64>()?;
+
+    let comment = provider
+        .get_comment(owner, repo, number, comment_id, true)
+        .await?;
+
+    // Render with normal logic (respects resolved flag for collapsing)
+    Ok(render_comment_thread(comment_id, &comment, 0, owner, repo, number).into())
 }
 
 fn render_comment_thread_expanded(
@@ -459,19 +499,46 @@ fn render_comment_thread_expanded(
     owner: &str,
     repo: &str,
     number: u64,
-) -> Container {
+) -> Containers {
     let margin_left = i32::try_from(depth * 20).unwrap_or(0);
     let is_root = depth == 0;
+    let thread_id = comment_thread_id(comment.id);
 
     container! {
         div
-            id=(comment_thread_id(comment.id))
+            id=(thread_id.clone())
             class=(comment_class(comment.id))
             margin-left=(margin_left)
             border-left="2, #d0d7de"
             padding-left=12
             gap=12
         {
+            @if is_root && comment.resolved {
+                div
+                    padding=8
+                    background="#f6f8fa"
+                    border-radius=6
+                    direction=row
+                    align-items=center
+                    gap=12
+                {
+                    span font-size=14 color="#8250df" font-weight=600 { "✓ Resolved (Expanded)" }
+                    div flex=1 {}
+                    button
+                        type=button
+                        color="#57606a"
+                        padding-x=8
+                        padding-y=4
+                        cursor=pointer
+                        font-size=12
+                        hx-get=(format!("/api/comment/collapse?owner={}&repo={}&number={}&id={}", owner, repo, number, comment.id))
+                        hx-swap="outerHTML"
+                        hx-target=(Selector::Id(thread_id))
+                    {
+                        "Hide resolved"
+                    }
+                }
+            }
             (render_comment_item(comment, is_root, owner, repo, number))
             (render_reply_form(root_comment_id, comment.id, owner, repo, number))
             @for reply in &comment.replies {
@@ -479,7 +546,6 @@ fn render_comment_thread_expanded(
             }
         }
     }
-    .into()
 }
 
 fn render_pr_view(
