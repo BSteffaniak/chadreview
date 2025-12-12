@@ -1,3 +1,8 @@
+//! Unified diff format parser with syntax highlighting support.
+//!
+//! This module parses standard unified diff format (as produced by `git diff`)
+//! into structured `DiffFile`, `DiffHunk`, and `DiffLine` types.
+
 use chadreview_pr_models::diff::{DiffFile, DiffHunk, DiffLine, FileStatus, LineType};
 use chadreview_syntax::SyntaxHighlighter;
 use regex::Regex;
@@ -5,11 +10,29 @@ use std::fmt::Write;
 use std::sync::LazyLock;
 use syntect::highlighting::Style;
 
+/// Regex for parsing unified diff hunk headers.
+/// Format: `@@ -old_start,old_lines +new_start,new_lines @@`
 static HUNK_HEADER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@").unwrap());
 
+/// Parse a unified diff into a structured `DiffFile`.
+///
+/// # Arguments
+///
+/// * `filename` - The name of the file being diffed (used for syntax detection)
+/// * `status` - The file status (Added, Modified, Deleted, Renamed)
+/// * `additions` - Count of added lines
+/// * `deletions` - Count of deleted lines
+/// * `diff_text` - The unified diff text (hunk headers and content)
+/// * `highlighter` - Syntax highlighter for code coloring
+///
+/// # Returns
+///
+/// A `DiffFile` containing all parsed hunks with syntax-highlighted content.
+///
 /// # Errors
-/// Returns an error if the diff cannot be parsed or highlighting fails
+///
+/// Returns an error if the diff cannot be parsed or highlighting fails.
 pub fn parse_unified_diff(
     filename: &str,
     status: FileStatus,
@@ -40,6 +63,7 @@ pub fn parse_unified_diff(
     })
 }
 
+/// Parse a single hunk from the diff.
 fn parse_hunk(
     lines: &[&str],
     i: &mut usize,
@@ -125,6 +149,7 @@ fn parse_hunk(
     })
 }
 
+/// Convert syntax-highlighted content to HTML.
 fn highlight_to_html(
     highlighter: &SyntaxHighlighter,
     filename: &str,
@@ -134,6 +159,7 @@ fn highlight_to_html(
     Ok(styled_to_html(&ranges))
 }
 
+/// Convert syntect style ranges to HTML with inline styles.
 fn styled_to_html(ranges: &[(Style, String)]) -> String {
     let mut html = String::new();
     for (style, text) in ranges {
@@ -151,12 +177,30 @@ fn styled_to_html(ranges: &[(Style, String)]) -> String {
     html
 }
 
+/// Escape HTML special characters.
 fn html_escape(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&#39;")
+}
+
+/// Count additions and deletions in a patch string.
+///
+/// This is useful when the counts aren't provided separately.
+#[must_use]
+pub fn count_additions_deletions(patch: &str) -> (u64, u64) {
+    let mut additions = 0u64;
+    let mut deletions = 0u64;
+    for line in patch.lines() {
+        if line.starts_with('+') && !line.starts_with("+++") {
+            additions += 1;
+        } else if line.starts_with('-') && !line.starts_with("---") {
+            deletions += 1;
+        }
+    }
+    (additions, deletions)
 }
 
 #[cfg(test)]
@@ -210,9 +254,62 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_multiple_hunks() {
+        let diff_text = r"@@ -1,3 +1,3 @@
+ line1
+-old2
++new2
+ line3
+@@ -10,3 +10,3 @@
+ line10
+-old11
++new11
+ line12";
+        let highlighter = SyntaxHighlighter::new();
+        let result = parse_unified_diff(
+            "test.txt",
+            FileStatus::Modified,
+            2,
+            2,
+            diff_text,
+            &highlighter,
+        );
+        assert!(result.is_ok());
+        let diff = result.unwrap();
+        assert_eq!(diff.hunks.len(), 2);
+        assert_eq!(diff.hunks[0].old_start, 1);
+        assert_eq!(diff.hunks[1].old_start, 10);
+    }
+
+    #[test]
     fn test_html_escape() {
         assert_eq!(html_escape("<div>"), "&lt;div&gt;");
         assert_eq!(html_escape("a & b"), "a &amp; b");
         assert_eq!(html_escape("\"test\""), "&quot;test&quot;");
+    }
+
+    #[test]
+    fn test_count_additions_deletions() {
+        let patch = r"@@ -1,3 +1,4 @@
+ context
+-deleted
++added1
++added2
+ context";
+        let (adds, dels) = count_additions_deletions(patch);
+        assert_eq!(adds, 2);
+        assert_eq!(dels, 1);
+    }
+
+    #[test]
+    fn test_count_ignores_file_headers() {
+        let patch = r"--- a/file.txt
++++ b/file.txt
+@@ -1,2 +1,2 @@
+-old
++new";
+        let (adds, dels) = count_additions_deletions(patch);
+        assert_eq!(adds, 1);
+        assert_eq!(dels, 1);
     }
 }

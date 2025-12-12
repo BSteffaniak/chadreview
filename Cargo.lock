@@ -1267,8 +1267,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chadreview_app_ui",
+ "chadreview_git_backend",
+ "chadreview_git_backend_git2",
  "chadreview_git_provider",
  "chadreview_github",
+ "chadreview_local_diff",
+ "chadreview_local_diff_models",
  "chadreview_pr_models",
  "chadreview_relay_client",
  "chadreview_relay_models",
@@ -1292,12 +1296,49 @@ version = "0.1.0"
 name = "chadreview_app_ui"
 version = "0.1.0"
 dependencies = [
+ "chadreview_git_backend_models",
+ "chadreview_local_diff_models",
  "chadreview_pr_models",
  "chrono",
  "hyperchad",
  "hyperchad_template",
  "hyperchad_transformer",
  "urlencoding",
+]
+
+[[package]]
+name = "chadreview_diff"
+version = "0.1.0"
+dependencies = [
+ "chadreview_pr_models",
+ "chadreview_syntax",
+ "regex",
+ "syntect",
+]
+
+[[package]]
+name = "chadreview_git_backend"
+version = "0.1.0"
+dependencies = [
+ "chadreview_git_backend_models",
+]
+
+[[package]]
+name = "chadreview_git_backend_git2"
+version = "0.1.0"
+dependencies = [
+ "chadreview_git_backend",
+ "chadreview_git_backend_models",
+ "git2",
+ "tempfile",
+]
+
+[[package]]
+name = "chadreview_git_backend_models"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -1319,15 +1360,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "chadreview_diff",
  "chadreview_git_provider",
  "chadreview_pr_models",
  "chadreview_syntax",
  "chrono",
  "log 0.4.28",
- "regex",
  "reqwest",
  "serde_json",
- "syntect",
  "tokio",
  "tokio-test",
  "wiremock",
@@ -1338,6 +1378,28 @@ name = "chadreview_github_models"
 version = "0.1.0"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "chadreview_local_diff"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chadreview_diff",
+ "chadreview_git_backend",
+ "chadreview_git_backend_models",
+ "chadreview_local_diff_models",
+ "chadreview_pr_models",
+ "chadreview_syntax",
+]
+
+[[package]]
+name = "chadreview_local_diff_models"
+version = "0.1.0"
+dependencies = [
+ "chadreview_git_backend_models",
+ "serde",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -2839,6 +2901,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "git2"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b903b73e45dc0c6c596f2d37eccece7c1c8bb6e4407b001096387c63d0d93724"
+dependencies = [
+ "bitflags 2.10.0",
+ "libc",
+ "libgit2-sys",
+ "log 0.4.28",
+ "url 2.5.7",
+]
+
+[[package]]
 name = "gl_generator"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4286,6 +4361,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "libgit2-sys"
+version = "0.17.0+1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10472326a8a6477c3c20a64547b0059e4b0d086869eee31e6d7da728a8eb7224"
+dependencies = [
+ "cc",
+ "libc",
+ "libz-sys",
+ "pkg-config",
+]
+
+[[package]]
 name = "libloading"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4310,6 +4397,18 @@ dependencies = [
  "bitflags 2.10.0",
  "libc",
  "redox_syscall 0.5.18",
+]
+
+[[package]]
+name = "libz-sys"
+version = "1.1.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15d118bbf3771060e7311cc7bb0545b01d08a8b4a7de949198dec1fa0ca1c0f7"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+ "vcpkg",
 ]
 
 [[package]]

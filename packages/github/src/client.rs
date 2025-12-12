@@ -1,5 +1,5 @@
-use crate::diff_parser::parse_unified_diff;
 use anyhow::Result;
+use chadreview_diff::parse_unified_diff;
 use chadreview_git_provider::GitProvider;
 use chadreview_pr_models::{
     Comment, CommentType, CreateComment, DiffFile, FileStatus, Label, PrState, PullRequest, User,

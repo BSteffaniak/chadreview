@@ -37,6 +37,31 @@ pub fn render(
     }
 }
 
+/// Render diffs in read-only mode (no comment UI).
+///
+/// Used for local git diffs where comments are not supported.
+#[must_use]
+pub fn render_readonly(diffs: &[DiffFile]) -> Containers {
+    if diffs.is_empty() {
+        return container! {
+            div padding=20 color="#57606a" {
+                "No changes in this diff."
+            }
+        };
+    }
+
+    container! {
+        section padding=20 gap=24 {
+            h2 font-size=20 font-weight=600 color="#24292f" margin-bottom=16 {
+                "Files changed"
+            }
+            @for diff_file in diffs {
+                (render_file_readonly(diff_file))
+            }
+        }
+    }
+}
+
 fn render_file(
     commit_sha: &str,
     file: &DiffFile,
@@ -76,6 +101,74 @@ fn render_file(
                                     (render_create_comment_form(owner, repo, number, commit_sha, &file.filename, line_number))
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Render a single file in read-only mode (no comment UI).
+fn render_file_readonly(file: &DiffFile) -> Containers {
+    container! {
+        div border="1px solid #d0d7de" border-radius=6 {
+            table width=100% {
+                (render_file_header(file))
+                @for hunk in &file.hunks {
+                    (render_hunk_header_row(hunk))
+                    tbody font-family="monospace" font-size=12 {
+                        @for line in &hunk.lines {
+                            (render_line_row_readonly(line))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Render a line row without comment functionality.
+fn render_line_row_readonly(diff_line: &DiffLine) -> Containers {
+    let bg_color = match diff_line.line_type {
+        LineType::Addition => "#e6ffec",
+        LineType::Deletion => "#ffebe9",
+        LineType::Context => "#ffffff",
+    };
+
+    container! {
+        tr {
+            (render_line_numbers_inline(diff_line))
+
+            td {
+                div direction=row {
+                    div
+                        width=20
+                        background=(bg_color)
+                        padding-y=4
+                        color=#57606a
+                        user-select=none
+                        justify-content=center
+                        align-items=center
+                    {
+                        (render_diff_marker_inline(diff_line))
+                    }
+
+                    div
+                        flex=1
+                        flex-shrink=0
+                        background=(bg_color)
+                        padding-x=4
+                        justify-content=center
+                    {
+                        div
+                            white-space=preserve-wrap
+                            user-select=text
+                            font-family="monospace"
+                            font-size=12
+                            overflow-wrap=anywhere
+                        {
+                            (diff_line.highlighted_html)
                         }
                     }
                 }

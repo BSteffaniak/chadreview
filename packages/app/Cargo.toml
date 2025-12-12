@@ -13,6 +13,10 @@ version     = { workspace = true }
 [package.metadata.cargo-machete]
 ignored = [
     "chadreview_app_ui",
+    "chadreview_git_backend",
+    "chadreview_git_backend_git2",
+    "chadreview_local_diff",
+    "chadreview_local_diff_models",
     "chadreview_relay_models",
     "chadreview_state",
     "hyperchad_template",
@@ -55,12 +59,25 @@ chadreview_relay_client = { workspace = true }
 chadreview_relay_models = { workspace = true }
 chadreview_state        = { workspace = true }
 
+# Optional dependencies for local git support
+chadreview_git_backend       = { workspace = true, optional = true }
+chadreview_git_backend_git2  = { workspace = true, optional = true }
+chadreview_local_diff        = { workspace = true, optional = true }
+chadreview_local_diff_models = { workspace = true, optional = true }
+
 [features]
 default = ["assets"]
 
 bitbucket = []
-github    = []
-gitlab    = []
+github = []
+gitlab = []
+local-git = [
+    "chadreview_app_ui/local-git",
+    "dep:chadreview_git_backend",
+    "dep:chadreview_git_backend_git2",
+    "dep:chadreview_local_diff",
+    "dep:chadreview_local_diff_models",
+]
 
 actix = ["hyperchad/renderer-html-actix"]
 assets = ["hyperchad/renderer-assets"]

@@ -1,0 +1,23 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "Local diff models for ChadReview"
+edition     = { workspace = true }
+keywords    = ["diff", "git", "models"]
+license     = { workspace = true }
+name        = "chadreview_local_diff_models"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_git_backend_models = { workspace = true }
+serde                         = { workspace = true, features = ["derive", "std"] }
+thiserror                     = { workspace = true }
+
+[features]
+default          = []
+fail-on-warnings = ["chadreview_git_backend_models/fail-on-warnings"]
+
+[lints]
+workspace = true

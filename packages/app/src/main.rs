@@ -37,13 +37,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Set RELAY_URL environment variable to enable real-time webhook updates.");
     }
 
-    let router = routes::create_router(&provider, relay_url);
+    #[allow(unused_mut)]
+    let mut router = routes::create_router(&provider, relay_url);
 
-    println!("Router created with 4 routes:");
+    // Add local git routes if the feature is enabled
+    #[cfg(feature = "local-git")]
+    {
+        let git_backend = Arc::new(chadreview_git_backend_git2::Git2Backend);
+        router = chadreview_app::local_routes::add_local_routes(router, git_backend);
+        println!("Local git diff support enabled.");
+    }
+
+    println!("Router created with routes:");
     println!("  GET  /pr?owner=<owner>&repo=<repo>&number=<number>");
     println!("  POST /api/pr/comment?owner=<owner>&repo=<repo>&number=<number>");
     println!("  PUT  /api/comment/update?id=<id>");
     println!("  DELETE /api/comment/delete?id=<id>");
+    #[cfg(feature = "local-git")]
+    println!("  GET  /local[?repo=<path>&base=<ref>&head=<ref>&...]");
 
     let runtime = switchy::unsync::runtime::Runtime::new();
     let handle = runtime.handle();

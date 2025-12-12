@@ -1,0 +1,29 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "git2 implementation of GitBackend for ChadReview"
+edition     = { workspace = true }
+keywords    = ["git", "git2", "libgit2"]
+license     = { workspace = true }
+name        = "chadreview_git_backend_git2"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_git_backend        = { workspace = true }
+chadreview_git_backend_models = { workspace = true }
+git2                          = { workspace = true }
+
+[features]
+default = []
+fail-on-warnings = [
+    "chadreview_git_backend/fail-on-warnings",
+    "chadreview_git_backend_models/fail-on-warnings",
+]
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

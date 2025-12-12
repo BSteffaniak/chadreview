@@ -26,9 +26,17 @@ hyperchad_template = { workspace = true }
 hyperchad_transformer = { workspace = true }
 urlencoding = { workspace = true }
 
+# Optional dependencies for local git support
+chadreview_git_backend_models = { workspace = true, optional = true }
+chadreview_local_diff_models  = { workspace = true, optional = true }
+
 [features]
-default          = []
+default = []
 fail-on-warnings = ["chadreview_pr_models/fail-on-warnings"]
+local-git = [
+    "dep:chadreview_git_backend_models",
+    "dep:chadreview_local_diff_models",
+]
 
 [package.metadata.cargo-machete]
 ignored = ["hyperchad_template", "hyperchad_transformer"]

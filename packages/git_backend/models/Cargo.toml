@@ -1,0 +1,22 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "Git backend models for ChadReview"
+edition     = { workspace = true }
+keywords    = ["git", "models"]
+license     = { workspace = true }
+name        = "chadreview_git_backend_models"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+serde     = { workspace = true, features = ["derive", "std"] }
+thiserror = { workspace = true }
+
+[features]
+default          = []
+fail-on-warnings = []
+
+[lints]
+workspace = true

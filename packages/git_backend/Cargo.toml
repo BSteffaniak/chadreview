@@ -1,0 +1,21 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "Git backend trait abstraction for ChadReview"
+edition     = { workspace = true }
+keywords    = ["backend", "git", "trait"]
+license     = { workspace = true }
+name        = "chadreview_git_backend"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_git_backend_models = { workspace = true }
+
+[features]
+default          = []
+fail-on-warnings = ["chadreview_git_backend_models/fail-on-warnings"]
+
+[lints]
+workspace = true

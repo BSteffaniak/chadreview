@@ -3,10 +3,16 @@ members = [
     "packages/app",
     "packages/app/models",
     "packages/app/ui",
+    "packages/diff",
+    "packages/git_backend",
+    "packages/git_backend/models",
+    "packages/git_backend_git2",
     "packages/git_provider",
     "packages/git_provider/models",
     "packages/github",
     "packages/github/models",
+    "packages/local_diff",
+    "packages/local_diff/models",
     "packages/pr",
     "packages/pr/models",
     "packages/relay/client",
@@ -35,10 +41,16 @@ enum_glob_use = "deny"
 chadreview_app                 = { path = "packages/app", version = "0.1.0", default-features = false }
 chadreview_app_models          = { path = "packages/app/models", version = "0.1.0", default-features = false }
 chadreview_app_ui              = { path = "packages/app/ui", version = "0.1.0", default-features = false }
+chadreview_diff                = { path = "packages/diff", version = "0.1.0", default-features = false }
+chadreview_git_backend         = { path = "packages/git_backend", version = "0.1.0", default-features = false }
+chadreview_git_backend_git2    = { path = "packages/git_backend_git2", version = "0.1.0", default-features = false }
+chadreview_git_backend_models  = { path = "packages/git_backend/models", version = "0.1.0", default-features = false }
 chadreview_git_provider        = { path = "packages/git_provider", version = "0.1.0", default-features = false }
 chadreview_git_provider_models = { path = "packages/git_provider/models", version = "0.1.0", default-features = false }
 chadreview_github              = { path = "packages/github", version = "0.1.0", default-features = false }
 chadreview_github_models       = { path = "packages/github/models", version = "0.1.0", default-features = false }
+chadreview_local_diff          = { path = "packages/local_diff", version = "0.1.0", default-features = false }
+chadreview_local_diff_models   = { path = "packages/local_diff/models", version = "0.1.0", default-features = false }
 chadreview_pr                  = { path = "packages/pr", version = "0.1.0", default-features = false }
 chadreview_pr_models           = { path = "packages/pr/models", version = "0.1.0", default-features = false }
 chadreview_relay_client        = { path = "packages/relay/client", version = "0.1.0", default-features = false }
@@ -79,6 +91,8 @@ tokio = { version = "1.48.0", default-features = false }
 tokio-tungstenite = { version = "0.28.0", default-features = false }
 urlencoding = { version = "2.1.3", default-features = false }
 uuid = { version = "1.18.1", default-features = false }
+
+git2 = { version = "0.19", default-features = false }
 
 hyperchad             = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
 hyperchad_template    = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }

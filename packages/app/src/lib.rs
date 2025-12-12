@@ -4,6 +4,8 @@
 
 pub mod actions;
 pub mod events;
+#[cfg(feature = "local-git")]
+pub mod local_routes;
 pub mod routes;
 
 #[cfg(feature = "assets")]

@@ -1,0 +1,32 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools", "parsing"]
+description = "Generic unified diff parsing for ChadReview"
+edition     = { workspace = true }
+keywords    = ["diff", "parser", "unified-diff"]
+license     = { workspace = true }
+name        = "chadreview_diff"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_pr_models = { workspace = true }
+chadreview_syntax = { workspace = true }
+regex = { workspace = true, features = ["std"] }
+syntect = { workspace = true, features = [
+    "default-syntaxes",
+    "default-themes",
+    "parsing",
+    "regex-onig",
+] }
+
+[features]
+default = []
+fail-on-warnings = [
+    "chadreview_pr_models/fail-on-warnings",
+    "chadreview_syntax/fail-on-warnings",
+]
+
+[lints]
+workspace = true

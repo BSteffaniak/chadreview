@@ -3,6 +3,5 @@
 #![allow(clippy::multiple_crate_versions)]
 
 pub mod client;
-pub mod diff_parser;
 
 pub use client::GitHubProvider;

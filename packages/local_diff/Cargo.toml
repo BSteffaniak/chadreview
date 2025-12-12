@@ -1,0 +1,34 @@
+[package]
+authors     = { workspace = true }
+categories  = ["development-tools"]
+description = "Local git diff provider for ChadReview"
+edition     = { workspace = true }
+keywords    = ["diff", "git", "local"]
+license     = { workspace = true }
+name        = "chadreview_local_diff"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+anyhow                        = { workspace = true, features = ["std"] }
+chadreview_diff               = { workspace = true }
+chadreview_git_backend        = { workspace = true }
+chadreview_git_backend_models = { workspace = true }
+chadreview_local_diff_models  = { workspace = true }
+chadreview_pr_models          = { workspace = true }
+chadreview_syntax             = { workspace = true }
+
+[features]
+default = []
+fail-on-warnings = [
+    "chadreview_diff/fail-on-warnings",
+    "chadreview_git_backend/fail-on-warnings",
+    "chadreview_git_backend_models/fail-on-warnings",
+    "chadreview_local_diff_models/fail-on-warnings",
+    "chadreview_pr_models/fail-on-warnings",
+    "chadreview_syntax/fail-on-warnings",
+]
+
+[lints]
+workspace = true

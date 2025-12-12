@@ -6,3 +6,6 @@ pub mod comment_thread;
 pub mod diff_viewer;
 pub mod general_comments;
 pub mod pr_header;
+
+#[cfg(feature = "local-git")]
+pub mod local_header;
