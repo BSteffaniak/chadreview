@@ -1,10 +1,10 @@
 use actix_web::{HttpRequest, HttpResponse, web};
-use actix_ws::Message;
 use chadreview_relay_models::{ClientMessage, ServerMessage};
 use futures::StreamExt;
 use tokio::sync::mpsc;
 
 use crate::state::AppState;
+use crate::ws::{Message, MessageStream, Session};
 
 /// Handles WebSocket connections
 ///
@@ -19,7 +19,7 @@ pub async fn handler(
 ) -> Result<HttpResponse, actix_web::Error> {
     let instance_id = path.into_inner();
 
-    let (response, session, msg_stream) = actix_ws::handle(&req, body)?;
+    let (response, session, msg_stream) = crate::ws::handle(&req, body)?;
 
     let (tx, rx) = mpsc::unbounded_channel::<String>();
 
@@ -40,8 +40,8 @@ pub async fn handler(
 async fn handle_websocket_connection(
     state: web::Data<AppState>,
     instance_id: String,
-    mut session: actix_ws::Session,
-    mut msg_stream: actix_ws::MessageStream,
+    session: Session,
+    mut msg_stream: MessageStream,
     mut rx: mpsc::UnboundedReceiver<String>,
 ) {
     log::info!("WebSocket connection established for instance: {instance_id}");
@@ -60,7 +60,7 @@ async fn handle_websocket_connection(
                             handle_client_message(
                                 &state,
                                 &instance_id,
-                                &mut session,
+                                &session,
                                 client_msg,
                             )
                             .await;
@@ -87,7 +87,7 @@ async fn handle_websocket_connection(
 async fn handle_client_message(
     state: &AppState,
     instance_id: &str,
-    session: &mut actix_ws::Session,
+    session: &Session,
     msg: ClientMessage,
 ) {
     match msg {

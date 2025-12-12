@@ -19,11 +19,15 @@ name = "relay-server"
 path = "src/main.rs"
 
 [dependencies]
+actix-codec             = { workspace = true }
+actix-http              = { workspace = true, features = ["ws"] }
 actix-web               = { workspace = true, features = ["macros", "rustls"] }
-actix-ws                = { workspace = true }
+bytes                   = { workspace = true }
+bytestring              = { workspace = true }
 chadreview_relay_models = { workspace = true }
 env_logger              = { workspace = true }
 futures                 = { workspace = true }
+futures-core            = { workspace = true }
 hex                     = { workspace = true, features = ["std"] }
 hmac                    = { workspace = true }
 log                     = { workspace = true }

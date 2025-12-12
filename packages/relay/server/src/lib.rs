@@ -5,6 +5,7 @@
 pub mod state;
 pub mod webhook;
 pub mod websocket;
+mod ws;
 
 use actix_web::{App, HttpServer, middleware, web};
 use state::AppState;

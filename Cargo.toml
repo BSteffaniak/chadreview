@@ -60,15 +60,19 @@ chadreview_relay_testing       = { path = "packages/relay/testing", version = "0
 chadreview_state               = { path = "packages/state", version = "0.1.0", default-features = false }
 chadreview_syntax              = { path = "packages/syntax", version = "0.1.0", default-features = false }
 
+actix-codec = { version = "0.5.2", default-features = false }
+actix-http = { version = "3.11.2", default-features = false }
 actix-web = { version = "4.11.0", default-features = false }
-actix-ws = { version = "0.3.0", default-features = false }
 anyhow = { version = "1.0.100", default-features = false }
 async-trait = { version = "0.1.89", default-features = false }
+bytes = { version = "1.11.0", default-features = false }
+bytestring = { version = "1.5.0", default-features = false }
 chrono = { version = "0.4.42", default-features = false }
 clap = { version = "4.5.23", default-features = false, features = ["std"] }
 dirs = { version = "6.0.0", default-features = false }
 env_logger = { version = "0.11.8", default-features = false }
 futures = { version = "0.3.31", default-features = false }
+futures-core = { version = "0.3.31", default-features = false }
 gh-emoji = { version = "1.0.8", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 hmac = { version = "0.12.1", default-features = false }
