@@ -1,0 +1,26 @@
+[package]
+authors     = { workspace = true }
+categories  = ["filesystem"]
+description = "Local comment storage for ChadReview"
+edition     = { workspace = true }
+keywords    = ["comments", "local", "storage"]
+license     = { workspace = true }
+name        = "chadreview_local_comment"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_local_comment_models = { workspace = true }
+chrono = { workspace = true, features = ["clock", "std"] }
+dirs = { workspace = true }
+serde_json = { workspace = true, features = ["std"] }
+sha2 = { workspace = true }
+switchy = { workspace = true, default-features = false, features = [
+    "uuid-uuid",
+] }
+thiserror = { workspace = true }
+
+[features]
+default          = []
+fail-on-warnings = []

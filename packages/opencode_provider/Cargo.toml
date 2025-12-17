@@ -1,0 +1,33 @@
+[package]
+authors     = { workspace = true }
+categories  = ["asynchronous"]
+description = "OpenCode AI provider for ChadReview"
+edition     = { workspace = true }
+keywords    = ["ai", "opencode", "provider"]
+license     = { workspace = true }
+name        = "chadreview_opencode_provider"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+async-trait = { workspace = true }
+chadreview_ai_provider = { workspace = true }
+chadreview_ai_provider_models = { workspace = true }
+chadreview_local_comment_models = { workspace = true }
+chrono = { workspace = true, features = ["clock", "std"] }
+dirs = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true, features = ["derive", "std"] }
+serde_json = { workspace = true, features = ["std"] }
+switchy = { workspace = true, features = [
+    "async-io",
+    "async-process",
+    "async-time",
+    "async-tokio",
+] }
+thiserror = { workspace = true }
+
+[features]
+default          = []
+fail-on-warnings = []

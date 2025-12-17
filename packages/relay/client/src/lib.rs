@@ -232,10 +232,20 @@ impl RelayClient {
         std::fs::read_to_string(&config_path).map_or_else(
             |_| {
                 let id = uuid::Uuid::new_v4().to_string();
-                if let Some(parent) = config_path.parent() {
-                    let _ = std::fs::create_dir_all(parent);
+                if let Some(parent) = config_path.parent()
+                    && let Err(e) = std::fs::create_dir_all(parent)
+                {
+                    log::warn!(
+                        "Failed to create config directory {}: {e}",
+                        parent.display()
+                    );
                 }
-                let _ = std::fs::write(&config_path, &id);
+                if let Err(e) = std::fs::write(&config_path, &id) {
+                    log::warn!(
+                        "Failed to write instance ID to {}: {e}",
+                        config_path.display()
+                    );
+                }
                 id
             },
             |id| id.trim().to_string(),

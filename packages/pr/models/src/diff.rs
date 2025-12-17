@@ -1,6 +1,5 @@
+use chadreview_diff_models::LineNumber;
 use serde::{Deserialize, Serialize};
-
-use crate::comment::LineNumber;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiffFile {

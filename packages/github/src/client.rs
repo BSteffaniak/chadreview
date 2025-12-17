@@ -1,9 +1,9 @@
 use anyhow::Result;
 use chadreview_diff::parse_unified_diff;
+use chadreview_diff_models::LineNumber;
 use chadreview_git_provider::GitProvider;
 use chadreview_pr_models::{
     Comment, CommentType, CreateComment, DiffFile, FileStatus, Label, PrState, PullRequest, User,
-    comment::LineNumber,
 };
 use chadreview_syntax::SyntaxHighlighter;
 
@@ -1024,7 +1024,7 @@ fn find_comment_in_tree(comments: &[Comment], comment_id: u64) -> Option<Comment
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chadreview_pr_models::comment::LineNumber;
+    use chadreview_diff_models::LineNumber;
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 

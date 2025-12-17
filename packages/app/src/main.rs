@@ -74,6 +74,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = builder.build_default()?;
 
+    // Set the global renderer for pushing partial view updates (SSE)
+    if chadreview_app::RENDERER
+        .set(Box::new(app.renderer.clone()))
+        .is_err()
+    {
+        log::warn!("RENDERER was already initialized");
+    }
+
     println!("\nStarting server at http://{host}:{port}");
     println!("Press Ctrl+C to stop\n");
 

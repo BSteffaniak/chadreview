@@ -1,0 +1,22 @@
+[package]
+authors     = { workspace = true }
+categories  = ["asynchronous"]
+description = "AI provider abstraction for ChadReview"
+edition     = { workspace = true }
+keywords    = ["ai", "provider", "trait"]
+license     = { workspace = true }
+name        = "chadreview_ai_provider"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+async-trait                     = { workspace = true }
+chadreview_ai_provider_models   = { workspace = true }
+chadreview_local_comment_models = { workspace = true }
+switchy                         = { workspace = true, features = ["async-sync", "async-tokio"] }
+thiserror                       = { workspace = true }
+
+[features]
+default          = []
+fail-on-warnings = []

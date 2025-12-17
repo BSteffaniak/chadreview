@@ -1,5 +1,8 @@
+#![allow(clippy::implicit_hasher)]
+
+use chadreview_diff_models::LineNumber;
 use chadreview_pr_models::{
-    Comment, CommentType, DiffFile, DiffHunk, DiffLine, FileStatus, LineType, comment::LineNumber,
+    Comment, CommentType, DiffFile, DiffHunk, DiffLine, FileStatus, LineType,
 };
 use hyperchad::template::{Containers, LayoutOverflow, container};
 
@@ -7,6 +10,9 @@ use crate::comment_thread::{
     add_comment_button_id, render_add_comment_button, render_comment_thread,
     render_create_comment_form,
 };
+
+#[cfg(feature = "local-git")]
+pub mod local;
 
 #[must_use]
 pub fn render(
@@ -168,7 +174,7 @@ fn render_line_row_readonly(diff_line: &DiffLine) -> Containers {
                             font-size=12
                             overflow-wrap=anywhere
                         {
-                            (diff_line.highlighted_html)
+                            raw { (diff_line.highlighted_html) }
                         }
                     }
                 }
@@ -250,7 +256,7 @@ fn render_line_row(file_path: &str, diff_line: &DiffLine) -> Containers {
                 div
                     direction=row
                     position=relative
-                    fx-hover=fx { element(add_comment_button_id).display() }
+                    fx-hover=fx { element_by_id(add_comment_button_id).display() }
                 {
                     div
                         width=20
@@ -280,7 +286,7 @@ fn render_line_row(file_path: &str, diff_line: &DiffLine) -> Containers {
                             font-size=12
                             overflow-wrap=anywhere
                         {
-                            (diff_line.highlighted_html)
+                            raw { (diff_line.highlighted_html) }
                         }
                     }
                 }
@@ -289,7 +295,7 @@ fn render_line_row(file_path: &str, diff_line: &DiffLine) -> Containers {
     }
 }
 
-fn render_line_numbers_inline(line: &DiffLine) -> Containers {
+pub(crate) fn render_line_numbers_inline(line: &DiffLine) -> Containers {
     container! {
         td
             background="#f6f8fa"
@@ -324,7 +330,7 @@ fn render_line_numbers_inline(line: &DiffLine) -> Containers {
     }
 }
 
-const fn render_diff_marker_inline(line: &DiffLine) -> &'static str {
+pub(crate) const fn render_diff_marker_inline(line: &DiffLine) -> &'static str {
     match line.line_type {
         LineType::Addition => "+",
         LineType::Deletion => "-",
@@ -332,7 +338,7 @@ const fn render_diff_marker_inline(line: &DiffLine) -> &'static str {
     }
 }
 
-fn render_hunk_header_row(hunk: &DiffHunk) -> Containers {
+pub(crate) fn render_hunk_header_row(hunk: &DiffHunk) -> Containers {
     container! {
         thead {
             tr
@@ -366,7 +372,8 @@ fn render_hunk_header_row(hunk: &DiffHunk) -> Containers {
         }
     }
 }
-fn render_file_stats(file: &DiffFile) -> Containers {
+
+pub(crate) fn render_file_stats(file: &DiffFile) -> Containers {
     container! {
         div direction=row align-items=center gap=8 font-size=13 {
             span color="#1a7f37" font-weight=600 {

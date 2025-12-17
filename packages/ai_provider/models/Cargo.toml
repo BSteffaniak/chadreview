@@ -1,0 +1,20 @@
+[package]
+authors     = { workspace = true }
+categories  = ["data-structures"]
+description = "AI provider models for ChadReview"
+edition     = { workspace = true }
+keywords    = ["ai", "models", "provider"]
+license     = { workspace = true }
+name        = "chadreview_ai_provider_models"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_local_comment_models = { workspace = true }
+chrono                          = { workspace = true, features = ["serde", "std"] }
+serde                           = { workspace = true, features = ["derive", "std"] }
+
+[features]
+default          = []
+fail-on-warnings = []

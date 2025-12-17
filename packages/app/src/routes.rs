@@ -12,11 +12,9 @@ use chadreview_app_ui::{
     diff_viewer::render_line_comments,
     general_comments,
 };
+use chadreview_diff_models::{LineNumber, ParseLineNumberError};
 use chadreview_git_provider::GitProvider;
-use chadreview_pr_models::{
-    CommentType, CreateComment,
-    comment::{LineNumber, ParseLineNumberError},
-};
+use chadreview_pr_models::{CommentType, CreateComment};
 use chadreview_relay_client::RelayClient;
 use chadreview_relay_models::PrKey;
 use hyperchad::{

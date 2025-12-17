@@ -1,0 +1,19 @@
+[package]
+authors     = { workspace = true }
+categories  = ["data-structures"]
+description = "Shared diff models for ChadReview"
+edition     = { workspace = true }
+keywords    = ["diff", "line-number", "models"]
+license     = { workspace = true }
+name        = "chadreview_diff_models"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+serde     = { workspace = true, features = ["derive", "std"] }
+thiserror = { workspace = true }
+
+[features]
+default          = []
+fail-on-warnings = []

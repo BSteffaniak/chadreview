@@ -8,4 +8,6 @@ pub mod general_comments;
 pub mod pr_header;
 
 #[cfg(feature = "local-git")]
+pub mod local_comments;
+#[cfg(feature = "local-git")]
 pub mod local_header;

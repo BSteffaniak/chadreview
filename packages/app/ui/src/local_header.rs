@@ -6,6 +6,8 @@
 use chadreview_local_diff_models::LocalDiffInfo;
 use hyperchad_template::{Containers, container};
 
+use crate::local_comments;
+
 /// Render the header for a local diff view.
 ///
 /// Displays:
@@ -14,6 +16,7 @@ use hyperchad_template::{Containers, container};
 /// - Statistics (additions, deletions, files changed)
 /// - Commit list (if applicable)
 #[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn render_local_diff_header(info: &LocalDiffInfo) -> Containers {
     let additions = info.total_additions;
     let deletions = info.total_deletions;
@@ -48,12 +51,13 @@ pub fn render_local_diff_header(info: &LocalDiffInfo) -> Containers {
                 (info.description.clone())
             }
 
-            // Stats row
+            // Stats row with collapse/expand controls
             div
                 direction=row
                 gap=16
                 font-size=14
                 align-items=center
+                overflow-x=(hyperchad_template::LayoutOverflow::Wrap { grid: false })
             {
                 span color="#1a7f37" font-weight=500 {
                     "+"
@@ -81,6 +85,12 @@ pub fn render_local_diff_header(info: &LocalDiffInfo) -> Containers {
                         "Working tree dirty"
                     }
                 }
+
+                // Spacer to push collapse controls to the right
+                div flex=1 {}
+
+                // Collapse/Expand everything controls (files + comments, but not replies)
+                (local_comments::render_header_collapse_everything_controls())
             }
 
             // Ref information (if available)

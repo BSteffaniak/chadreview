@@ -1,9 +1,12 @@
 [workspace]
 members = [
+    "packages/ai_provider",
+    "packages/ai_provider/models",
     "packages/app",
     "packages/app/models",
     "packages/app/ui",
     "packages/diff",
+    "packages/diff/models",
     "packages/git_backend",
     "packages/git_backend/models",
     "packages/git_backend_git2",
@@ -11,8 +14,11 @@ members = [
     "packages/git_provider/models",
     "packages/github",
     "packages/github/models",
+    "packages/local_comment",
+    "packages/local_comment/models",
     "packages/local_diff",
     "packages/local_diff/models",
+    "packages/opencode_provider",
     "packages/pr",
     "packages/pr/models",
     "packages/relay/client",
@@ -38,27 +44,33 @@ unsafe_code = "forbid"
 enum_glob_use = "deny"
 
 [workspace.dependencies]
-chadreview_app                 = { path = "packages/app", version = "0.1.0", default-features = false }
-chadreview_app_models          = { path = "packages/app/models", version = "0.1.0", default-features = false }
-chadreview_app_ui              = { path = "packages/app/ui", version = "0.1.0", default-features = false }
-chadreview_diff                = { path = "packages/diff", version = "0.1.0", default-features = false }
-chadreview_git_backend         = { path = "packages/git_backend", version = "0.1.0", default-features = false }
-chadreview_git_backend_git2    = { path = "packages/git_backend_git2", version = "0.1.0", default-features = false }
-chadreview_git_backend_models  = { path = "packages/git_backend/models", version = "0.1.0", default-features = false }
-chadreview_git_provider        = { path = "packages/git_provider", version = "0.1.0", default-features = false }
-chadreview_git_provider_models = { path = "packages/git_provider/models", version = "0.1.0", default-features = false }
-chadreview_github              = { path = "packages/github", version = "0.1.0", default-features = false }
-chadreview_github_models       = { path = "packages/github/models", version = "0.1.0", default-features = false }
-chadreview_local_diff          = { path = "packages/local_diff", version = "0.1.0", default-features = false }
-chadreview_local_diff_models   = { path = "packages/local_diff/models", version = "0.1.0", default-features = false }
-chadreview_pr                  = { path = "packages/pr", version = "0.1.0", default-features = false }
-chadreview_pr_models           = { path = "packages/pr/models", version = "0.1.0", default-features = false }
-chadreview_relay_client        = { path = "packages/relay/client", version = "0.1.0", default-features = false }
-chadreview_relay_models        = { path = "packages/relay/models", version = "0.1.0", default-features = false }
-chadreview_relay_server        = { path = "packages/relay/server", version = "0.1.0", default-features = false }
-chadreview_relay_testing       = { path = "packages/relay/testing", version = "0.1.0", default-features = false }
-chadreview_state               = { path = "packages/state", version = "0.1.0", default-features = false }
-chadreview_syntax              = { path = "packages/syntax", version = "0.1.0", default-features = false }
+chadreview_ai_provider          = { path = "packages/ai_provider", version = "0.1.0", default-features = false }
+chadreview_ai_provider_models   = { path = "packages/ai_provider/models", version = "0.1.0", default-features = false }
+chadreview_app                  = { path = "packages/app", version = "0.1.0", default-features = false }
+chadreview_app_models           = { path = "packages/app/models", version = "0.1.0", default-features = false }
+chadreview_app_ui               = { path = "packages/app/ui", version = "0.1.0", default-features = false }
+chadreview_diff                 = { path = "packages/diff", version = "0.1.0", default-features = false }
+chadreview_diff_models          = { path = "packages/diff/models", version = "0.1.0", default-features = false }
+chadreview_git_backend          = { path = "packages/git_backend", version = "0.1.0", default-features = false }
+chadreview_git_backend_git2     = { path = "packages/git_backend_git2", version = "0.1.0", default-features = false }
+chadreview_git_backend_models   = { path = "packages/git_backend/models", version = "0.1.0", default-features = false }
+chadreview_git_provider         = { path = "packages/git_provider", version = "0.1.0", default-features = false }
+chadreview_git_provider_models  = { path = "packages/git_provider/models", version = "0.1.0", default-features = false }
+chadreview_github               = { path = "packages/github", version = "0.1.0", default-features = false }
+chadreview_github_models        = { path = "packages/github/models", version = "0.1.0", default-features = false }
+chadreview_local_comment        = { path = "packages/local_comment", version = "0.1.0", default-features = false }
+chadreview_local_comment_models = { path = "packages/local_comment/models", version = "0.1.0", default-features = false }
+chadreview_local_diff           = { path = "packages/local_diff", version = "0.1.0", default-features = false }
+chadreview_local_diff_models    = { path = "packages/local_diff/models", version = "0.1.0", default-features = false }
+chadreview_opencode_provider    = { path = "packages/opencode_provider", version = "0.1.0", default-features = false }
+chadreview_pr                   = { path = "packages/pr", version = "0.1.0", default-features = false }
+chadreview_pr_models            = { path = "packages/pr/models", version = "0.1.0", default-features = false }
+chadreview_relay_client         = { path = "packages/relay/client", version = "0.1.0", default-features = false }
+chadreview_relay_models         = { path = "packages/relay/models", version = "0.1.0", default-features = false }
+chadreview_relay_server         = { path = "packages/relay/server", version = "0.1.0", default-features = false }
+chadreview_relay_testing        = { path = "packages/relay/testing", version = "0.1.0", default-features = false }
+chadreview_state                = { path = "packages/state", version = "0.1.0", default-features = false }
+chadreview_syntax               = { path = "packages/syntax", version = "0.1.0", default-features = false }
 
 actix-codec = { version = "0.5.2", default-features = false }
 actix-http = { version = "3.11.2", default-features = false }
@@ -98,16 +110,18 @@ uuid = { version = "1.18.1", default-features = false }
 
 git2 = { version = "0.19", default-features = false }
 
-hyperchad             = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
-hyperchad_template    = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
-hyperchad_transformer = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
-moosicbox_logging     = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
-openport              = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
-switchy               = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+# hyperchad             = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+# hyperchad_router      = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+# hyperchad_template    = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+# hyperchad_transformer = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+# moosicbox_logging     = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+# openport              = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
+# switchy               = { git = "https://github.com/MoosicBox/MoosicBox", branch = "master", default-features = false }
 
-# hyperchad             = { path = "../MoosicBox/packages/hyperchad", default-features = false }
-# hyperchad_template    = { path = "../MoosicBox/packages/hyperchad/template", default-features = false }
-# hyperchad_transformer = { path = "../MoosicBox/packages/hyperchad/transformer", default-features = false }
-# moosicbox_logging     = { path = "../MoosicBox/packages/logging", default-features = false }
-# openport              = { path = "../MoosicBox/packages/openport", default-features = false }
-# switchy               = { path = "../MoosicBox/packages/switchy", default-features = false }
+hyperchad             = { path = "../MoosicBox/packages/hyperchad", default-features = false }
+hyperchad_router      = { path = "../MoosicBox/packages/hyperchad/router", default-features = false }
+hyperchad_template    = { path = "../MoosicBox/packages/hyperchad/template", default-features = false }
+hyperchad_transformer = { path = "../MoosicBox/packages/hyperchad/transformer", default-features = false }
+moosicbox_logging     = { path = "../MoosicBox/packages/logging", default-features = false }
+openport              = { path = "../MoosicBox/packages/openport", default-features = false }
+switchy               = { path = "../MoosicBox/packages/switchy", default-features = false }

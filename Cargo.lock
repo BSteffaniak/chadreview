@@ -1378,21 +1378,48 @@ dependencies = [
 ]
 
 [[package]]
+name = "chadreview_ai_provider"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chadreview_ai_provider_models",
+ "chadreview_local_comment_models",
+ "switchy",
+ "thiserror 2.0.17",
+]
+
+[[package]]
+name = "chadreview_ai_provider_models"
+version = "0.1.0"
+dependencies = [
+ "chadreview_local_comment_models",
+ "chrono",
+ "serde",
+]
+
+[[package]]
 name = "chadreview_app"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chadreview_ai_provider",
+ "chadreview_ai_provider_models",
  "chadreview_app_ui",
+ "chadreview_diff_models",
  "chadreview_git_backend",
  "chadreview_git_backend_git2",
  "chadreview_git_provider",
  "chadreview_github",
+ "chadreview_local_comment",
+ "chadreview_local_comment_models",
  "chadreview_local_diff",
  "chadreview_local_diff_models",
+ "chadreview_opencode_provider",
  "chadreview_pr_models",
  "chadreview_relay_client",
  "chadreview_relay_models",
  "chadreview_state",
+ "chrono",
  "hyperchad",
  "hyperchad_template",
  "hyperchad_transformer",
@@ -1402,6 +1429,7 @@ dependencies = [
  "serde_json",
  "switchy",
  "thiserror 2.0.17",
+ "urlencoding",
 ]
 
 [[package]]
@@ -1412,13 +1440,17 @@ version = "0.1.0"
 name = "chadreview_app_ui"
 version = "0.1.0"
 dependencies = [
+ "chadreview_diff_models",
  "chadreview_git_backend_models",
+ "chadreview_local_comment_models",
  "chadreview_local_diff_models",
  "chadreview_pr_models",
  "chrono",
  "hyperchad",
+ "hyperchad_router",
  "hyperchad_template",
  "hyperchad_transformer",
+ "switchy",
  "urlencoding",
 ]
 
@@ -1430,6 +1462,14 @@ dependencies = [
  "chadreview_syntax",
  "regex",
  "syntect",
+]
+
+[[package]]
+name = "chadreview_diff_models"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -1477,6 +1517,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chadreview_diff",
+ "chadreview_diff_models",
  "chadreview_git_provider",
  "chadreview_pr_models",
  "chadreview_syntax",
@@ -1494,6 +1535,30 @@ name = "chadreview_github_models"
 version = "0.1.0"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "chadreview_local_comment"
+version = "0.1.0"
+dependencies = [
+ "chadreview_local_comment_models",
+ "chrono",
+ "dirs",
+ "serde_json",
+ "sha2",
+ "switchy",
+ "thiserror 2.0.17",
+]
+
+[[package]]
+name = "chadreview_local_comment_models"
+version = "0.1.0"
+dependencies = [
+ "chadreview_diff_models",
+ "chrono",
+ "serde",
+ "serde_json",
+ "switchy",
 ]
 
 [[package]]
@@ -1519,6 +1584,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "chadreview_opencode_provider"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chadreview_ai_provider",
+ "chadreview_ai_provider_models",
+ "chadreview_local_comment_models",
+ "chrono",
+ "dirs",
+ "log 0.4.29",
+ "serde",
+ "serde_json",
+ "switchy",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "chadreview_pr"
 version = "0.1.0"
 
@@ -1526,9 +1608,9 @@ version = "0.1.0"
 name = "chadreview_pr_models"
 version = "0.1.0"
 dependencies = [
+ "chadreview_diff_models",
  "chrono",
  "serde",
- "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -2656,6 +2738,9 @@ name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
+dependencies = [
+ "getrandom 0.2.16",
+]
 
 [[package]]
 name = "fax"
@@ -2746,7 +2831,18 @@ checksum = "da0e4dd2a88388a1f4ccc7c9ce104604dab68d9f408dc34cd45823d5a9069095"
 dependencies = [
  "futures-core",
  "futures-sink",
- "nanorand",
+ "spin 0.9.8",
+]
+
+[[package]]
+name = "flume"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e139bc46ca777eb5efaf62df0ab8cc5fd400866427e56c68b22e414e53bd3be"
+dependencies = [
+ "fastrand 2.3.0",
+ "futures-core",
+ "futures-sink",
  "spin 0.9.8",
 ]
 
@@ -3638,7 +3734,6 @@ dependencies = [
 [[package]]
 name = "hyperchad"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "hyperchad_actions",
  "hyperchad_app",
@@ -3660,7 +3755,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_actions"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "hyperchad_color",
  "hyperchad_transformer_models",
@@ -3675,11 +3769,10 @@ dependencies = [
 [[package]]
 name = "hyperchad_app"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "clap",
- "flume",
+ "flume 0.12.0",
  "hyperchad_actions",
  "hyperchad_renderer",
  "hyperchad_renderer_egui",
@@ -3699,7 +3792,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_color"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "color-hex",
  "egui",
@@ -3712,7 +3804,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_js_bundler"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "anyhow",
  "log 0.4.29",
@@ -3732,7 +3823,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_markdown"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "gh-emoji",
  "hyperchad_color",
@@ -3741,13 +3831,13 @@ dependencies = [
  "log 0.4.29",
  "moosicbox_assert",
  "pulldown-cmark",
+ "syntect",
  "thiserror 2.0.17",
 ]
 
 [[package]]
 name = "hyperchad_renderer"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "bytes",
@@ -3761,12 +3851,11 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_egui"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "eframe",
  "egui_extras",
- "flume",
+ "flume 0.12.0",
  "hyperchad_actions",
  "hyperchad_color",
  "hyperchad_renderer",
@@ -3786,12 +3875,11 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_fltk"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "bytes",
  "fltk",
- "flume",
+ "flume 0.12.0",
  "hyperchad_actions",
  "hyperchad_renderer",
  "hyperchad_transformer",
@@ -3809,11 +3897,10 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_html"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "bytes",
- "flume",
+ "flume 0.12.0",
  "html-escape",
  "hyperchad_renderer",
  "hyperchad_renderer_html_actix",
@@ -3837,7 +3924,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_html_actix"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "actix-cors",
  "actix-files",
@@ -3845,7 +3931,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "flate2",
- "flume",
+ "flume 0.12.0",
  "futures-util",
  "hyperchad_renderer",
  "log 0.4.29",
@@ -3860,9 +3946,8 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_html_http"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
- "flume",
+ "flume 0.12.0",
  "http 1.4.0",
  "hyperchad_color",
  "hyperchad_renderer",
@@ -3882,7 +3967,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_html_lambda"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "bytes",
@@ -3898,11 +3982,10 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_html_web_server"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "bytes",
- "flume",
+ "flume 0.12.0",
  "hyperchad_renderer",
  "log 0.4.29",
  "moosicbox_assert",
@@ -3915,7 +3998,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_vanilla_js"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "const_format",
@@ -3934,7 +4016,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_renderer_vanilla_js_hash"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "const-hex",
  "const_format",
@@ -3944,11 +4025,10 @@ dependencies = [
 [[package]]
 name = "hyperchad_router"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "base64 0.22.1",
  "bytes",
- "flume",
+ "flume 0.12.0",
  "futures",
  "hyper 0.10.16",
  "hyperchad_renderer",
@@ -3970,7 +4050,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_simulator"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "log 0.4.29",
  "moosicbox_assert",
@@ -3984,7 +4063,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_template"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "hyperchad_actions",
  "hyperchad_color",
@@ -4000,7 +4078,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_template_actions_dsl"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "hyperchad_actions",
  "log 0.4.29",
@@ -4012,7 +4089,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_template_macros"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "hyperchad_color",
  "hyperchad_template_actions_dsl",
@@ -4028,7 +4104,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_transformer"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "bumpalo",
  "html-escape",
@@ -4051,7 +4126,6 @@ dependencies = [
 [[package]]
 name = "hyperchad_transformer_models"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "log 0.4.29",
  "moosicbox_assert",
@@ -4683,6 +4757,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "linked-hash-map"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4840,7 +4920,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f43e377ae111ceb4630fc8239cf7af8c894193f02bb23976177a475007977417"
 dependencies = [
  "fastrand 2.3.0",
- "flume",
+ "flume 0.11.1",
  "if-addrs 0.14.0",
  "log 0.4.29",
  "mio",
@@ -4962,7 +5042,6 @@ dependencies = [
 [[package]]
 name = "moosicbox_app_native_image"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "bytes",
  "rust-embed",
@@ -4971,7 +5050,6 @@ dependencies = [
 [[package]]
 name = "moosicbox_arb"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "log 0.4.29",
  "moosicbox_assert",
@@ -4982,7 +5060,6 @@ dependencies = [
 [[package]]
 name = "moosicbox_assert"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "colored",
  "moosicbox_env_utils",
@@ -4991,7 +5068,6 @@ dependencies = [
 [[package]]
 name = "moosicbox_config"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "home",
  "json5",
@@ -5006,12 +5082,10 @@ dependencies = [
 [[package]]
 name = "moosicbox_env_utils"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 
 [[package]]
 name = "moosicbox_logging"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "free_log_client",
  "log 0.4.29",
@@ -5023,7 +5097,6 @@ dependencies = [
 [[package]]
 name = "moosicbox_middleware"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "actix-web",
  "futures",
@@ -5037,7 +5110,6 @@ dependencies = [
 [[package]]
 name = "moosicbox_profiles"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "actix-web",
  "futures",
@@ -5080,15 +5152,6 @@ dependencies = [
  "spirv",
  "thiserror 2.0.17",
  "unicode-ident",
-]
-
-[[package]]
-name = "nanorand"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a51313c5820b0b02bd422f4b44776fbf47961755c74ce64afc73bfad10226c3"
-dependencies = [
- "getrandom 0.2.16",
 ]
 
 [[package]]
@@ -5863,9 +5926,9 @@ dependencies = [
 
 [[package]]
 name = "os_info"
-version = "3.13.0"
+version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c39b5918402d564846d5aba164c09a66cc88d232179dfd3e3c619a25a268392"
+checksum = "e4022a17595a00d6a369236fdae483f0de7f0a339960a53118b818238e132224"
 dependencies = [
  "android_system_properties",
  "log 0.4.29",
@@ -6081,6 +6144,19 @@ name = "pkg-config"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
+
+[[package]]
+name = "plist"
+version = "1.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "740ebea15c5d1428f910cd1a5f52cebf8d25006245ed8ade92702f4943d91e07"
+dependencies = [
+ "base64 0.22.1",
+ "indexmap",
+ "quick-xml 0.38.4",
+ "serde",
+ "time 0.3.44",
+]
 
 [[package]]
 name = "png"
@@ -6340,6 +6416,15 @@ name = "quick-xml"
 version = "0.37.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "331e97a1af0bf59823e6eadffe373d7b27f485be8748f71471c662c1f269b7fb"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.38.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b66c2058c55a409d601666cffe35f04333cf1013010882cec174a7467cd4e21c"
 dependencies = [
  "memchr",
 ]
@@ -6705,9 +6790,9 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 
 [[package]]
 name = "reqwest"
-version = "0.12.25"
+version = "0.12.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6eff9328d40131d43bd911d42d79eb6a47312002a4daefc9e37f17e74a7701a"
+checksum = "3b4c14b2d9afca6a60277086b0cc6a6ae0b568f6f7916c943a8cdc79f8be240f"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -7320,7 +7405,6 @@ dependencies = [
 [[package]]
 name = "simvar"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "simvar_harness",
 ]
@@ -7328,7 +7412,6 @@ dependencies = [
 [[package]]
 name = "simvar_harness"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "btparse",
  "color-backtrace",
@@ -7344,7 +7427,6 @@ dependencies = [
 [[package]]
 name = "simvar_utils"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "switchy",
 ]
@@ -7829,9 +7911,9 @@ dependencies = [
 
 [[package]]
 name = "swc_ecma_minifier"
-version = "38.0.0"
+version = "38.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "652ab751b567f3cf9d9c2b8cd0c96c1696c02cae88264a0bc8b756a38bcd5412"
+checksum = "b5c8d16175fe77d4df22505885ae16770c72b440898a2c7d44126a599bdb8488"
 dependencies = [
  "arrayvec",
  "bitflags 2.10.0",
@@ -7865,9 +7947,9 @@ dependencies = [
 
 [[package]]
 name = "swc_ecma_parser"
-version = "29.0.1"
+version = "29.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8827a7cc739847b854e189bf8a62637baebef2d7869fa889e394d85165e0bc0b"
+checksum = "e63984b544fe1d8f66e9ce616e57429bb878572fcf1504851ef9d9f4f5260e2b"
 dependencies = [
  "bitflags 2.10.0",
  "either",
@@ -8099,7 +8181,6 @@ dependencies = [
 [[package]]
 name = "switchy"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "switchy_async",
  "switchy_async_macros",
@@ -8114,6 +8195,7 @@ dependencies = [
  "switchy_telemetry",
  "switchy_time",
  "switchy_upnp",
+ "switchy_uuid",
  "switchy_web_server",
  "tokio",
 ]
@@ -8121,9 +8203,8 @@ dependencies = [
 [[package]]
 name = "switchy_async"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
- "flume",
+ "flume 0.12.0",
  "futures",
  "log 0.4.29",
  "pin-project-lite",
@@ -8139,7 +8220,6 @@ dependencies = [
 [[package]]
 name = "switchy_async_macros"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "log 0.4.29",
  "proc-macro2",
@@ -8150,7 +8230,6 @@ dependencies = [
 [[package]]
 name = "switchy_database"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "chrono",
@@ -8168,7 +8247,6 @@ dependencies = [
 [[package]]
 name = "switchy_database_connection"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "log 0.4.29",
  "switchy_async",
@@ -8180,7 +8258,6 @@ dependencies = [
 [[package]]
 name = "switchy_env"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "log 0.4.29",
  "thiserror 2.0.17",
@@ -8189,7 +8266,6 @@ dependencies = [
 [[package]]
 name = "switchy_fs"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "bytes",
  "log 0.4.29",
@@ -8201,7 +8277,6 @@ dependencies = [
 [[package]]
 name = "switchy_http"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "bytes",
@@ -8217,7 +8292,6 @@ dependencies = [
 [[package]]
 name = "switchy_http_models"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "actix-web",
  "moosicbox_assert",
@@ -8229,7 +8303,6 @@ dependencies = [
 [[package]]
 name = "switchy_mdns"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "hostname",
@@ -8243,7 +8316,6 @@ dependencies = [
 [[package]]
 name = "switchy_random"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "log 0.4.29",
  "rand 0.8.5",
@@ -8252,11 +8324,10 @@ dependencies = [
 [[package]]
 name = "switchy_tcp"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-trait",
  "bytes",
- "flume",
+ "flume 0.12.0",
  "log 0.4.29",
  "paste",
  "scoped-tls",
@@ -8268,7 +8339,6 @@ dependencies = [
 [[package]]
 name = "switchy_telemetry"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "log 0.4.29",
  "moosicbox_assert",
@@ -8286,7 +8356,6 @@ dependencies = [
 [[package]]
 name = "switchy_time"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "chrono",
  "log 0.4.29",
@@ -8297,7 +8366,6 @@ dependencies = [
 [[package]]
 name = "switchy_upnp"
 version = "0.1.4"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -8320,9 +8388,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "switchy_uuid"
+version = "0.1.0"
+dependencies = [
+ "log 0.4.29",
+ "serde",
+ "switchy_env",
+ "switchy_random",
+ "uuid",
+]
+
+[[package]]
 name = "switchy_web_server"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "actix-cors",
  "actix-http",
@@ -8348,7 +8426,6 @@ dependencies = [
 [[package]]
 name = "switchy_web_server_core"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "moosicbox_assert",
 ]
@@ -8356,7 +8433,6 @@ dependencies = [
 [[package]]
 name = "switchy_web_server_cors"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "moosicbox_assert",
  "switchy_http_models",
@@ -8365,7 +8441,6 @@ dependencies = [
 [[package]]
 name = "switchy_web_server_simulator"
 version = "0.1.0"
-source = "git+https://github.com/MoosicBox/MoosicBox?branch=master#cc45d7120b223a3422807bcfdd653868ac71c2e6"
 dependencies = [
  "bytes",
  "log 0.4.29",
@@ -8420,11 +8495,14 @@ dependencies = [
  "fnv",
  "once_cell",
  "onig",
+ "plist",
  "regex-syntax",
  "serde",
  "serde_derive",
+ "serde_json",
  "thiserror 2.0.17",
  "walkdir",
+ "yaml-rust",
 ]
 
 [[package]]
@@ -10421,6 +10499,15 @@ name = "y4m"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a5a4b21e1a62b67a2970e6831bc091d7b87e119e7f9791aef9702e3bef04448"
+
+[[package]]
+name = "yaml-rust"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
+dependencies = [
+ "linked-hash-map",
+]
 
 [[package]]
 name = "yoke"

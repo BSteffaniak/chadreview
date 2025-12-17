@@ -1,4 +1,4 @@
-use chadreview_pr_models::comment::LineNumber;
+use chadreview_diff_models::LineNumber;
 use chadreview_pr_models::{Comment, CommentType};
 use hyperchad::markdown::markdown_to_container;
 use hyperchad::template::{Containers, container};
@@ -183,7 +183,7 @@ pub fn render_create_comment_form(
                         padding-y=8
                         border-radius=6
                         cursor=pointer
-                        fx-click=fx { element(form_id).no_display() }
+                        fx-click=fx { element_by_id(form_id).no_display() }
                     {
                         "Cancel"
                     }
@@ -245,7 +245,7 @@ pub fn render_reply_form(
                         padding-y=8
                         border-radius=6
                         cursor=pointer
-                        fx-click=fx { element(form_id).no_display() }
+                        fx-click=fx { element_by_id(form_id).no_display() }
                     {
                         "Cancel"
                     }
@@ -304,7 +304,7 @@ pub fn render_edit_form(
                     padding-y=8
                     border-radius=6
                     cursor=pointer
-                    fx-click=fx { element(form_id).no_display() }
+                    fx-click=fx { element_by_id(form_id).no_display() }
                 {
                     "Cancel"
                 }
@@ -329,7 +329,7 @@ pub fn render_reply_button(comment: &Comment) -> Containers {
             padding-y=4
             cursor=pointer
             font-size=12
-            fx-click=fx { element(form_id).display() }
+            fx-click=fx { element_by_id(form_id).display() }
         {
             "Reply"
         }
@@ -349,7 +349,7 @@ pub fn render_edit_button(comment: &Comment) -> Containers {
             padding-y=4
             cursor=pointer
             font-size=12
-            fx-click=fx { element(button_id).display(); element(body_id).no_display() }
+            fx-click=fx { element_by_id(button_id).display(); element_by_id(body_id).no_display() }
         {
             "Edit"
         }
@@ -581,7 +581,7 @@ pub fn render_add_comment_button(file_path: &str, line: LineNumber) -> Container
             font-size=12
             opacity=0.6
             user-select=none
-            fx-click=fx { element(form_id).display() }
+            fx-click=fx { element_by_id(form_id).display() }
         {
             "+"
         }

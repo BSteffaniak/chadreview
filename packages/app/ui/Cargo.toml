@@ -10,33 +10,43 @@ readme      = "README.md"
 repository  = { workspace = true }
 version     = { workspace = true }
 
+[package.metadata.cargo-machete]
+ignored = ["hyperchad_template", "hyperchad_transformer"]
+
 [dependencies]
+chadreview_diff_models = { workspace = true }
 chadreview_pr_models = { workspace = true }
 chrono = { workspace = true }
 hyperchad = { workspace = true, features = [
     "logic",
     "markdown",
     "markdown-emoji",
+    "markdown-syntax-highlighting",
     "markdown-xss-protection",
     "router",
     "template",
     "transformer",
 ] }
+hyperchad_router = { workspace = true }
 hyperchad_template = { workspace = true }
 hyperchad_transformer = { workspace = true }
+switchy = { workspace = true, default-features = false, features = [
+    "uuid-uuid",
+] }
 urlencoding = { workspace = true }
 
 # Optional dependencies for local git support
-chadreview_git_backend_models = { workspace = true, optional = true }
-chadreview_local_diff_models  = { workspace = true, optional = true }
+chadreview_git_backend_models   = { workspace = true, optional = true }
+chadreview_local_comment_models = { workspace = true, optional = true }
+chadreview_local_diff_models    = { workspace = true, optional = true }
 
 [features]
-default = []
+default = ["local-git"]
+
 fail-on-warnings = ["chadreview_pr_models/fail-on-warnings"]
+
 local-git = [
     "dep:chadreview_git_backend_models",
+    "dep:chadreview_local_comment_models",
     "dep:chadreview_local_diff_models",
 ]
-
-[package.metadata.cargo-machete]
-ignored = ["hyperchad_template", "hyperchad_transformer"]

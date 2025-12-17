@@ -12,11 +12,14 @@ version     = { workspace = true }
 
 [package.metadata.cargo-machete]
 ignored = [
+    "chadreview_ai_provider",
+    "chadreview_ai_provider_models",
     "chadreview_app_ui",
     "chadreview_git_backend",
     "chadreview_git_backend_git2",
     "chadreview_local_diff",
     "chadreview_local_diff_models",
+    "chadreview_opencode_provider",
     "chadreview_relay_models",
     "chadreview_state",
     "hyperchad_template",
@@ -48,10 +51,12 @@ serde_json = { workspace = true }
 switchy = { workspace = true, default-features = false, features = [
     "async-tokio",
     "http",
+    "uuid-uuid",
 ] }
 thiserror = { workspace = true }
 
 chadreview_app_ui       = { workspace = true }
+chadreview_diff_models  = { workspace = true }
 chadreview_git_provider = { workspace = true }
 chadreview_github       = { workspace = true }
 chadreview_pr_models    = { workspace = true }
@@ -60,10 +65,19 @@ chadreview_relay_models = { workspace = true }
 chadreview_state        = { workspace = true }
 
 # Optional dependencies for local git support
-chadreview_git_backend       = { workspace = true, optional = true }
-chadreview_git_backend_git2  = { workspace = true, optional = true }
-chadreview_local_diff        = { workspace = true, optional = true }
-chadreview_local_diff_models = { workspace = true, optional = true }
+chadreview_git_backend          = { workspace = true, optional = true }
+chadreview_git_backend_git2     = { workspace = true, optional = true }
+chadreview_local_comment        = { workspace = true, optional = true }
+chadreview_local_comment_models = { workspace = true, optional = true }
+chadreview_local_diff           = { workspace = true, optional = true }
+chadreview_local_diff_models    = { workspace = true, optional = true }
+chrono                          = { workspace = true, features = ["clock", "std"], optional = true }
+urlencoding                     = { workspace = true, optional = true }
+
+# Optional dependencies for AI integration
+chadreview_ai_provider        = { workspace = true, optional = true }
+chadreview_ai_provider_models = { workspace = true, optional = true }
+chadreview_opencode_provider  = { workspace = true, optional = true }
 
 [features]
 default = ["assets"]
@@ -75,13 +89,34 @@ local-git = [
     "chadreview_app_ui/local-git",
     "dep:chadreview_git_backend",
     "dep:chadreview_git_backend_git2",
+    "dep:chadreview_local_comment",
+    "dep:chadreview_local_comment_models",
     "dep:chadreview_local_diff",
     "dep:chadreview_local_diff_models",
+    "dep:chrono",
+    "dep:urlencoding",
 ]
 
-actix = ["hyperchad/renderer-html-actix"]
+# Hidden/internal feature for AI integration base - not for direct use
+_ai-integration = [
+    "dep:chadreview_ai_provider",
+    "dep:chadreview_ai_provider_models",
+    "local-git",
+]
+
+# Public feature for OpenCode AI integration
+ai-integration-opencode = [
+    "_ai-integration",
+    "dep:chadreview_opencode_provider",
+]
+
+actix = ["hyperchad/renderer-html-actix", "hyperchad/renderer-html-sse"]
 assets = ["hyperchad/renderer-assets"]
-dev = ["assets", "static-routes"]
+dev = [
+    "assets",
+    "hyperchad/renderer-vanilla-js-plugin-uuid-insecure",
+    "static-routes",
+]
 egui-glow = ["hyperchad/renderer-egui-glow"]
 egui-wgpu = ["hyperchad/renderer-egui-wgpu"]
 fltk = ["hyperchad/renderer-fltk"]
@@ -98,6 +133,8 @@ vanilla-js = [
     "hyperchad/renderer-vanilla-js-plugin-idiomorph",
     "hyperchad/renderer-vanilla-js-plugin-nav",
     "hyperchad/renderer-vanilla-js-plugin-routing",
+    "hyperchad/renderer-vanilla-js-plugin-sse",
+    "hyperchad/renderer-vanilla-js-plugin-uuid",
 ]
 
 fail-on-warnings = []

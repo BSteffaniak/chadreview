@@ -1,0 +1,25 @@
+[package]
+authors     = { workspace = true }
+categories  = ["data-structures"]
+description = "Local comment models for ChadReview"
+edition     = { workspace = true }
+keywords    = ["ai", "comments", "local", "models"]
+license     = { workspace = true }
+name        = "chadreview_local_comment_models"
+readme      = "README.md"
+repository  = { workspace = true }
+version     = { workspace = true }
+
+[dependencies]
+chadreview_diff_models = { workspace = true }
+chrono = { workspace = true, features = ["clock", "serde", "std"] }
+serde = { workspace = true, features = ["derive", "std"] }
+serde_json = { workspace = true, features = ["std"] }
+switchy = { workspace = true, default-features = false, features = [
+    "uuid-serde",
+    "uuid-uuid",
+] }
+
+[features]
+default          = []
+fail-on-warnings = []
